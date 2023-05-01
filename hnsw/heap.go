@@ -2,7 +2,7 @@ package hnsw
 
 type element struct {
 	id       int64
-	distance int64
+	distance float32
 }
 
 type Heap struct {
