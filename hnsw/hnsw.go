@@ -10,16 +10,16 @@ import (
 
 type Hnsw struct {
 	// Number of established connections
-	m int64
+	m int
 
 	// Maximum number of connections for each element per layer
-	mMax int64
+	mMax int
 
 	// Maximum number of connections for each element at layer zero
-	mMax0 int64
+	mMax0 int
 
 	// Size of the dynamic candidate list
-	efConstruction int64
+	efConstruction int
 
 	// Normalization factor for level generation
 	mL float64
@@ -27,7 +27,8 @@ type Hnsw struct {
 	entrypointID    int64
 	currentMaxLayer int64
 
-	nodes map[int64]*Vertex
+	nodes    map[int64]*Vertex
+	distFunc func([]float32, []float32) float32
 
 	initialInsertion *sync.Once
 }
@@ -58,7 +59,7 @@ func (h *Hnsw) insert(v *Vertex) error {
 		return nil
 	}
 
-	var nearestVertices heap.Interface
+	var nearestNeighbors heap.Interface
 
 	dist := h.calculateDistance(h.nodes[h.entrypointID].vector, v.vector)
 	eps := []element{{
@@ -72,8 +73,8 @@ func (h *Hnsw) insert(v *Vertex) error {
 
 	// Lookup Phase
 	for i := currentMaxLayer; i > vertexLayer; i-- {
-		nearestVertices, err = h.searchLayer(v, eps, 1, i)
-		eps[0] = nearestVertices.Pop().(element)
+		nearestNeighbors = h.searchLayer(v, eps, 1, i)
+		eps[0] = nearestNeighbors.Pop().(element)
 	}
 
 	// Construction Phase
@@ -84,14 +85,54 @@ func (h *Hnsw) insert(v *Vertex) error {
 	return nil
 }
 
-// TODO: implement
-func (h *Hnsw) searchLayer(v *Vertex, eps []element, ef int64, level int64) (heap.Interface, error) {
-	return nil, nil
+// TODO: test
+func (h *Hnsw) searchLayer(v *Vertex, eps []element, ef int, level int64) heap.Interface {
+	visited := NewSet[int64]()
+	for _, e := range eps {
+		visited.Add(e.id)
+	}
+
+	candidates := NewMinHeapFromSlice(eps)
+	nearestNeighbors := NewMaxHeapFromSlice(eps)
+
+	for candidates.Len() > 0 {
+		c := candidates.Pop().(element)
+		f := nearestNeighbors.Peek().(element)
+
+		if c.distance > f.distance {
+			break
+		}
+
+		cVertex := h.nodes[c.id]
+		for _, nid := range cVertex.GetConnections(level) {
+			if !visited.Contains(nid) {
+				visited.Add(nid)
+
+				f = nearestNeighbors.Peek().(element)
+				neighbour := h.nodes[nid]
+
+				dist := h.calculateDistance(neighbour.vector, v.vector)
+				if dist < f.distance || nearestNeighbors.Len() < ef {
+					e := element{id: nid, distance: dist}
+
+					candidates.Push(e)
+					nearestNeighbors.Push(e)
+
+					if nearestNeighbors.Len() > ef {
+						nearestNeighbors.Pop()
+					}
+				}
+			}
+		}
+
+	}
+
+	return nearestNeighbors
 }
 
 // TODO: implement
 func (h *Hnsw) calculateDistance(v1, v2 []float32) float32 {
-	return 0
+	return h.distFunc(v1, v2)
 }
 
 func (h *Hnsw) insertFirstVertex(v *Vertex) error {

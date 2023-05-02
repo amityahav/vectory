@@ -1,5 +1,7 @@
 package hnsw
 
+import "container/heap"
+
 type element struct {
 	id       int64
 	distance float32
@@ -28,6 +30,10 @@ func (h *Heap) Pop() any {
 	return x
 }
 
+func (h *Heap) Peek() any {
+	return h.elements[h.Len()-1]
+}
+
 func NewMinHeap(capacity int) *Heap {
 	return &Heap{
 		elements: make([]element, capacity),
@@ -37,6 +43,19 @@ func NewMinHeap(capacity int) *Heap {
 	}
 }
 
+func NewMinHeapFromSlice(s []element) *Heap {
+	h := Heap{
+		elements: s,
+		less: func(elements []element, i, j int) bool {
+			return elements[i].distance < elements[j].distance
+		},
+	}
+
+	heap.Init(&h)
+
+	return &h
+}
+
 func NewMaxHeap(capacity int) *Heap {
 	return &Heap{
 		elements: make([]element, capacity),
@@ -44,4 +63,17 @@ func NewMaxHeap(capacity int) *Heap {
 			return elements[i].distance > elements[j].distance
 		},
 	}
+}
+
+func NewMaxHeapFromSlice(s []element) *Heap {
+	h := Heap{
+		elements: s,
+		less: func(elements []element, i, j int) bool {
+			return elements[i].distance > elements[j].distance
+		},
+	}
+
+	heap.Init(&h)
+
+	return &h
 }
