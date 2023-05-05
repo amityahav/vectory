@@ -20,3 +20,11 @@ func (v *Vertex) Init(level int64, mMax, mMax0 int) {
 func (v *Vertex) GetConnections(level int64) []int64 {
 	return v.connections[level]
 }
+
+func (v *Vertex) AddConnection(level, id int64) {
+	v.connections[level] = append(v.connections[level], id)
+}
+
+func (v *Vertex) SetConnections(level int64, ids []int64) {
+	copy(v.connections[level], ids)
+}
