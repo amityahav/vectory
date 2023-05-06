@@ -56,6 +56,21 @@ func NewMinHeapFromSlice(s []element) *Heap {
 	return &h
 }
 
+func NewMinHeapFromSliceDeep(s []element, capacity int) *Heap {
+	h := Heap{
+		less: func(elements []element, i, j int) bool {
+			return elements[i].distance < elements[j].distance
+		},
+	}
+
+	h.elements = make([]element, capacity)
+	copy(h.elements, s)
+
+	heap.Init(&h)
+
+	return &h
+}
+
 func NewMaxHeap(capacity int) *Heap {
 	return &Heap{
 		elements: make([]element, capacity),
@@ -65,13 +80,15 @@ func NewMaxHeap(capacity int) *Heap {
 	}
 }
 
-func NewMaxHeapFromSlice(s []element) *Heap {
+func NewMaxHeapFromSliceDeep(s []element, capacity int) *Heap {
 	h := Heap{
-		elements: s,
 		less: func(elements []element, i, j int) bool {
 			return elements[i].distance > elements[j].distance
 		},
 	}
+
+	h.elements = make([]element, capacity)
+	copy(h.elements, s)
 
 	heap.Init(&h)
 

@@ -94,10 +94,9 @@ func (h *Hnsw) insert(v *Vertex) error {
 	var nearestNeighbors []element
 
 	dist := h.calculateDistance(h.nodes[h.entrypointID].vector, v.vector)
-	eps := []element{{
-		id:       h.entrypointID,
-		distance: dist,
-	}}
+
+	eps := make([]element, 0, 1)
+	eps = append(eps, element{id: h.entrypointID, distance: dist})
 
 	currentMaxLayer := h.currentMaxLayer
 	vertexLayer := h.calculateLevelForVertex()
@@ -115,10 +114,17 @@ func (h *Hnsw) insert(v *Vertex) error {
 		nearestNeighbors = h.searchLayer(v, eps, h.efConstruction, l)
 		neighbors := h.selectNeighbors(v, nearestNeighbors, h.m, l, h.extendCandidates, h.keepPrunedConnections)
 
-		v.SetConnections(l, neighbors)
+		v.AddConnections(l, neighbors)
 
-		for _, n := range neighbors {
+		for _, _ = range neighbors { // TODO: prune connections
 
+		}
+
+		eps = nearestNeighbors
+
+		if l > currentMaxLayer {
+			h.entrypointID = v.id
+			h.currentMaxLayer = l
 		}
 	}
 
@@ -132,8 +138,8 @@ func (h *Hnsw) searchLayer(v *Vertex, eps []element, ef int, level int64) []elem
 		visited.Add(e.id)
 	}
 
-	candidates := NewMinHeapFromSlice(eps)
-	nearestNeighbors := NewMaxHeapFromSlice(eps)
+	candidates := NewMinHeapFromSliceDeep(eps, ef+1)
+	nearestNeighbors := NewMaxHeapFromSliceDeep(eps, ef+1)
 
 	for candidates.Len() > 0 {
 		c := heap.Pop(candidates).(element)
@@ -171,9 +177,9 @@ func (h *Hnsw) searchLayer(v *Vertex, eps []element, ef int, level int64) []elem
 }
 
 func (h *Hnsw) selectNeighborsHeuristic(v *Vertex, candidates []element, m int, level int64, extendCandidates, keepPruned bool) []int64 {
-	var result []int64
+	result := make([]int64, 0, m)
 
-	workingQ := NewMinHeapFromSlice(candidates)
+	workingQ := NewMinHeapFromSliceDeep(candidates, cap(candidates))
 
 	set := NewSet[int64]()
 
@@ -190,13 +196,13 @@ func (h *Hnsw) selectNeighborsHeuristic(v *Vertex, candidates []element, m int, 
 						distance: h.calculateDistance(v.vector, nVertex.vector),
 					}
 
-					heap.Push(workingQ, nElem)
+					heap.Push(workingQ, nElem) // TODO: estimate fixed slice size?
 				}
 			}
 		}
 	}
 
-	var discards []element
+	var discards []element // TODO: figure out optimal fixed size
 
 	for workingQ.Len() > 0 && len(result) < m {
 		e := heap.Pop(workingQ).(element)
@@ -215,7 +221,7 @@ func (h *Hnsw) selectNeighborsHeuristic(v *Vertex, candidates []element, m int, 
 	}
 
 	if keepPruned {
-		discardedHeap := NewMaxHeapFromSlice(discards)
+		discardedHeap := NewMinHeapFromSlice(discards)
 		for discardedHeap.Len() > 0 && len(result) < m {
 			result = append(result, heap.Pop(discardedHeap).(element).id)
 		}
@@ -230,11 +236,11 @@ func (h *Hnsw) selectNeighborsSimple(v *Vertex, candidates []element, m int, _ i
 		size = len(candidates)
 	}
 
-	minHeap := NewMinHeapFromSlice(candidates)
-	neighbors := make([]int64, size)
+	minHeap := NewMinHeapFromSliceDeep(candidates, cap(candidates))
+	neighbors := make([]int64, 0, size)
 
 	for i := 0; i < size; i++ {
-		neighbors[i] = heap.Pop(minHeap).(element).id
+		neighbors = append(neighbors, heap.Pop(minHeap).(element).id)
 	}
 
 	return neighbors
