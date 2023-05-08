@@ -10,11 +10,13 @@ type Vertex struct {
 
 func (v *Vertex) Init(level int64, mMax, mMax0 int) {
 	v.connections = make([][]int64, level)
+
+	// initialising maximum connections to be + 1 in order to avoid allocating extra space when cap is full
 	for i := level - 1; i > 0; i-- {
-		v.connections[i] = make([]int64, 0, mMax)
+		v.connections[i] = make([]int64, 0, mMax+1)
 	}
 
-	v.connections[0] = make([]int64, 0, mMax0)
+	v.connections[0] = make([]int64, 0, mMax0+1)
 }
 
 func (v *Vertex) GetConnections(level int64) []int64 {
@@ -27,4 +29,8 @@ func (v *Vertex) AddConnection(level, id int64) {
 
 func (v *Vertex) AddConnections(level int64, ids []int64) {
 	v.connections[level] = append(v.connections[level], ids...)
+}
+
+func (v *Vertex) SetConnections(level int64, ids []int64) {
+	v.connections[level] = ids
 }

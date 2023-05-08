@@ -110,13 +110,33 @@ func (h *Hnsw) insert(v *Vertex) error {
 	}
 
 	// Construction Phase
+	maxConn := h.mMax
+
 	for l := min(currentMaxLayer, vertexLayer); l >= 0; l-- {
 		nearestNeighbors = h.searchLayer(v, eps, h.efConstruction, l)
 		neighbors := h.selectNeighbors(v, nearestNeighbors, h.m, l, h.extendCandidates, h.keepPrunedConnections)
 
 		v.AddConnections(l, neighbors)
 
-		for _, _ = range neighbors { // TODO: prune connections
+		if l == 0 {
+			maxConn = h.mMax0
+		}
+
+		for _, n := range neighbors { // TODO: prune connections
+			nVertex := h.nodes[n]
+			nVertex.AddConnection(l, v.id)
+
+			if len(nVertex.GetConnections(l)) > maxConn {
+				elems := make([]element, 0, len(nVertex.GetConnections(l))) // TODO: can be optimized size if we can estimate the num of connections total when extendingNeighbors
+
+				for _, nn := range nVertex.GetConnections(l) {
+					elems = append(elems, element{id: nn, distance: h.calculateDistance(v.vector, h.nodes[nn].vector)})
+				}
+
+				newNeighbors := h.selectNeighbors(v, elems, maxConn, l, h.extendCandidates, h.keepPrunedConnections)
+
+				nVertex.SetConnections(l, newNeighbors)
+			}
 
 		}
 
