@@ -1,6 +1,7 @@
 package hnsw
 
 import (
+	"Vectory/hnsw/distance"
 	"container/heap"
 	"fmt"
 	"math"
@@ -52,12 +53,22 @@ func NewHnsw() *Hnsw {
 	}
 
 	selectedNeighborsSimple := true
-	hnsw.SetSelectNeighborsFunc(selectedNeighborsSimple)
+	distanceType := "dot_product"
+
+	hnsw.setSelectNeighborsFunc(selectedNeighborsSimple)
+	hnsw.setDistanceFunction(distanceType)
 
 	return &hnsw
 }
 
-func (h *Hnsw) SetSelectNeighborsFunc(simple bool) {
+func (h *Hnsw) setDistanceFunction(distanceType string) {
+	switch distanceType {
+	case distance.DotProduct:
+		h.distFunc = distance.Dot
+	}
+}
+
+func (h *Hnsw) setSelectNeighborsFunc(simple bool) {
 	h.selectNeighbors = h.selectNeighborsHeuristic
 
 	if simple {
@@ -122,7 +133,7 @@ func (h *Hnsw) insert(v *Vertex) error {
 			maxConn = h.mMax0
 		}
 
-		for _, n := range neighbors { // TODO: prune connections
+		for _, n := range neighbors {
 			nVertex := h.nodes[n]
 			nVertex.AddConnection(l, v.id)
 
@@ -151,7 +162,6 @@ func (h *Hnsw) insert(v *Vertex) error {
 	return nil
 }
 
-// TODO: test
 func (h *Hnsw) searchLayer(v *Vertex, eps []element, ef int, level int64) []element {
 	visited := NewSet[int64]()
 	for _, e := range eps {
@@ -231,12 +241,18 @@ func (h *Hnsw) selectNeighborsHeuristic(v *Vertex, candidates []element, m int, 
 			result = append(result, e.id)
 		}
 
-		for _, _ = range result { // TODO: get elem
-			if e.distance < 5 { // TODO: what should it be?
-				result = append(result, e.id)
-			} else {
-				discards = append(discards, e)
+		flag := true
+		for _, r := range result {
+			if h.distFunc(h.nodes[e.id].vector, h.nodes[r].vector) < e.distance {
+				flag = false
+				break
 			}
+		}
+
+		if flag {
+			result = append(result, e.id)
+		} else {
+			discards = append(discards, e)
 		}
 	}
 
@@ -250,7 +266,7 @@ func (h *Hnsw) selectNeighborsHeuristic(v *Vertex, candidates []element, m int, 
 	return result
 }
 
-func (h *Hnsw) selectNeighborsSimple(v *Vertex, candidates []element, m int, _ int64, _, _ bool) []int64 {
+func (h *Hnsw) selectNeighborsSimple(_ *Vertex, candidates []element, m int, _ int64, _, _ bool) []int64 {
 	size := m
 	if len(candidates) < size {
 		size = len(candidates)
