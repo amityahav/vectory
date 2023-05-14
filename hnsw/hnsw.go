@@ -10,6 +10,19 @@ import (
 )
 
 type Hnsw struct {
+	hnswConfig
+
+	entrypointID    int64
+	currentMaxLayer int64
+
+	nodes           map[int64]*Vertex
+	distFunc        func([]float32, []float32) float32
+	selectNeighbors func(*Vertex, []element, int, int64, bool, bool) []int64
+
+	initialInsertion *sync.Once
+}
+
+type hnswConfig struct {
 	// Number of established connections
 	m int
 
@@ -25,38 +38,26 @@ type Hnsw struct {
 	// Normalization factor for level generation
 	mL float64
 
+	heuristic bool
+
+	distanceType string
+
 	// Flags for the heuristic neighbors selection
 	extendCandidates      bool
 	keepPrunedConnections bool
-
-	entrypointID    int64
-	currentMaxLayer int64
-
-	nodes           map[int64]*Vertex
-	distFunc        func([]float32, []float32) float32
-	selectNeighbors func(*Vertex, []element, int, int64, bool, bool) []int64
-
-	initialInsertion *sync.Once
 }
 
-// TODO: currently just for testing
-func NewHnsw() *Hnsw {
+func NewHnsw(config hnswConfig) *Hnsw {
 	hnsw := Hnsw{
-		m:               0,
-		mMax:            0,
-		mMax0:           0,
-		efConstruction:  0,
-		mL:              0,
-		entrypointID:    0,
-		currentMaxLayer: 0,
-		nodes:           make(map[int64]*Vertex),
+		hnswConfig:       config,
+		entrypointID:     0,
+		currentMaxLayer:  0,
+		nodes:            make(map[int64]*Vertex),
+		initialInsertion: &sync.Once{},
 	}
 
-	selectedNeighborsSimple := true
-	distanceType := "dot_product"
-
-	hnsw.setSelectNeighborsFunc(selectedNeighborsSimple)
-	hnsw.setDistanceFunction(distanceType)
+	hnsw.setSelectNeighborsFunc(hnsw.heuristic)
+	hnsw.setDistanceFunction(hnsw.distanceType)
 
 	return &hnsw
 }
@@ -76,7 +77,36 @@ func (h *Hnsw) setSelectNeighborsFunc(simple bool) {
 	}
 }
 
-func (h *Hnsw) insert(v *Vertex) error {
+func (h *Hnsw) KnnSearch(v *Vertex, k, ef int) []int64 {
+	var currentNearestElements []element
+
+	res := make([]int64, 0, k)
+
+	entrypointID := h.entrypointID
+	currentMaxLayer := h.currentMaxLayer
+
+	dist := h.calculateDistance(h.nodes[entrypointID].vector, v.vector)
+
+	eps := make([]element, 0, 1)
+	eps = append(eps, element{id: entrypointID, distance: dist})
+
+	for l := currentMaxLayer; l > 0; l-- {
+		currentNearestElements = h.searchLayer(v, eps, 1, l)
+		eps[0] = currentNearestElements[0]
+	}
+
+	currentNearestElements = h.searchLayer(v, eps, ef, 0)
+
+	minHeap := NewMinHeapFromSlice(currentNearestElements)
+
+	for i := 0; i < k; i++ {
+		res = append(res, heap.Pop(minHeap).(element).id)
+	}
+
+	return res
+}
+
+func (h *Hnsw) Insert(v *Vertex) error {
 	var (
 		first bool
 		err   error
@@ -282,7 +312,6 @@ func (h *Hnsw) selectNeighborsSimple(_ *Vertex, candidates []element, m int, _ i
 	return neighbors
 }
 
-// TODO: implement
 func (h *Hnsw) calculateDistance(v1, v2 []float32) float32 {
 	return h.distFunc(v1, v2)
 }
@@ -296,7 +325,7 @@ func (h *Hnsw) insertFirstVertex(v *Vertex) error {
 }
 
 func (h *Hnsw) isEmpty() bool {
-	return len(h.nodes) > 0
+	return len(h.nodes) == 0
 }
 
 func (h *Hnsw) calculateLevelForVertex() int64 {
