@@ -30,8 +30,16 @@ func TestHnsw(t *testing.T) {
 			vector: randomVector(dim),
 		})
 
-		t.Error(err)
+		if err != nil {
+			t.Error(err)
+		}
 	}
+
+	_ = hnsw.KnnSearch(&Vertex{
+		id:     -1,
+		vector: randomVector(dim),
+	}, 10, cfg.efConstruction)
+
 }
 
 func randomVector(dim int) []float32 {

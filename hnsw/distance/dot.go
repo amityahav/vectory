@@ -1,5 +1,9 @@
 package distance
 
+import (
+	"golang.org/x/sys/cpu"
+)
+
 const DotProduct = "dot_product"
 
 var dotProductImplementation = func(v1 []float32, v2 []float32) float32 {
@@ -13,9 +17,9 @@ var dotProductImplementation = func(v1 []float32, v2 []float32) float32 {
 }
 
 func init() {
-	//if cpu.X86.HasAVX2 {
-	//	dotProductImplementation = asm.Dot
-	//}
+	if cpu.X86.HasAVX2 {
+		//dotProductImplementation = asm.Dot
+	}
 }
 
 func Dot(v1, v2 []float32) float32 {

@@ -69,11 +69,11 @@ func (h *Hnsw) setDistanceFunction(distanceType string) {
 	}
 }
 
-func (h *Hnsw) setSelectNeighborsFunc(simple bool) {
-	h.selectNeighbors = h.selectNeighborsHeuristic
+func (h *Hnsw) setSelectNeighborsFunc(heuristic bool) {
+	h.selectNeighbors = h.selectNeighborsSimple
 
-	if simple {
-		h.selectNeighbors = h.selectNeighborsSimple
+	if heuristic {
+		h.selectNeighbors = h.selectNeighborsHeuristic
 	}
 }
 
@@ -128,6 +128,8 @@ func (h *Hnsw) Insert(v *Vertex) error {
 		return fmt.Errorf("initialInsertion: %s", err.Error())
 	}
 
+	h.nodes[v.id] = v
+
 	if first {
 		return nil
 	}
@@ -142,7 +144,7 @@ func (h *Hnsw) Insert(v *Vertex) error {
 	currentMaxLayer := h.currentMaxLayer
 	vertexLayer := h.calculateLevelForVertex()
 
-	v.Init(vertexLayer, h.mMax, h.mMax0)
+	v.Init(vertexLayer+1, h.mMax, h.mMax0)
 
 	// Lookup Phase
 	for l := currentMaxLayer; l > vertexLayer; l-- {
@@ -182,11 +184,11 @@ func (h *Hnsw) Insert(v *Vertex) error {
 		}
 
 		eps = nearestNeighbors
+	}
 
-		if l > currentMaxLayer {
-			h.entrypointID = v.id
-			h.currentMaxLayer = l
-		}
+	if vertexLayer > currentMaxLayer {
+		h.entrypointID = v.id
+		h.currentMaxLayer = vertexLayer
 	}
 
 	return nil
@@ -319,7 +321,6 @@ func (h *Hnsw) calculateDistance(v1, v2 []float32) float32 {
 func (h *Hnsw) insertFirstVertex(v *Vertex) error {
 	v.Init(1, -1, h.mMax0)
 	h.entrypointID = v.id
-	h.nodes[v.id] = v
 
 	return nil
 }

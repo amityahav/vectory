@@ -63,7 +63,7 @@ func NewMinHeapFromSliceDeep(s []element, capacity int) *Heap {
 		},
 	}
 
-	h.elements = make([]element, capacity)
+	h.elements = make([]element, len(s), capacity)
 	copy(h.elements, s)
 
 	heap.Init(&h)
@@ -87,7 +87,7 @@ func NewMaxHeapFromSliceDeep(s []element, capacity int) *Heap {
 		},
 	}
 
-	h.elements = make([]element, capacity)
+	h.elements = make([]element, len(s), capacity)
 	copy(h.elements, s)
 
 	heap.Init(&h)
