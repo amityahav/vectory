@@ -243,14 +243,17 @@ func (h *Hnsw) selectNeighborsHeuristic(v *Vertex, candidates []element, m int, 
 
 	workingQ := NewMinHeapFromSliceDeep(candidates, cap(candidates))
 
-	set := NewSet[int64]()
+	visited := NewSet[int64]()
+	for _, c := range candidates {
+		visited.Add(c.id)
+	}
 
 	if extendCandidates {
 		for _, c := range candidates {
-			set.Add(c.id)
 			for _, n := range h.nodes[c.id].GetConnections(level) {
-				if !set.Contains(n) {
-					set.Add(n)
+				if !visited.Contains(n) {
+					visited.Add(n)
+
 					nVertex := h.nodes[n]
 
 					nElem := element{
@@ -268,10 +271,6 @@ func (h *Hnsw) selectNeighborsHeuristic(v *Vertex, candidates []element, m int, 
 
 	for workingQ.Len() > 0 && len(result) < m {
 		e := heap.Pop(workingQ).(element)
-
-		if len(result) == 0 {
-			result = append(result, e.id)
-		}
 
 		flag := true
 		for _, r := range result {
