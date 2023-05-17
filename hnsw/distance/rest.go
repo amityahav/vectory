@@ -2,7 +2,9 @@ package distance
 
 import "math"
 
-func euclideanDistance(v1, v2 []float32) float32 {
+const Euclidean = "euclidean_distance"
+
+func EuclideanDistance(v1, v2 []float32) float32 {
 	var sum float64
 
 	for i := 0; i < len(v1); i++ {

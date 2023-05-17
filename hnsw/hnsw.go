@@ -20,6 +20,7 @@ type Hnsw struct {
 	selectNeighbors func(*Vertex, []element, int, int64, bool, bool) []int64
 
 	initialInsertion *sync.Once
+	mu               sync.RWMutex
 }
 
 type hnswConfig struct {
@@ -66,6 +67,8 @@ func (h *Hnsw) setDistanceFunction(distanceType string) {
 	switch distanceType {
 	case distance.DotProduct:
 		h.distFunc = distance.Dot
+	case distance.Euclidean:
+		h.distFunc = distance.EuclideanDistance
 	}
 }
 
@@ -128,21 +131,28 @@ func (h *Hnsw) Insert(v *Vertex) error {
 		return fmt.Errorf("initialInsertion: %s", err.Error())
 	}
 
+	h.mu.Lock()
 	h.nodes[v.id] = v
+	h.mu.Unlock()
 
 	if first {
 		return nil
 	}
 
+	h.mu.RLock()
+
+	entrypointID := h.entrypointID
+	currentMaxLayer := h.currentMaxLayer
+
+	h.mu.RUnlock()
+
+	vertexLayer := h.calculateLevelForVertex()
+	dist := h.calculateDistance(h.nodes[entrypointID].vector, v.vector)
+
 	var nearestNeighbors []element
 
-	dist := h.calculateDistance(h.nodes[h.entrypointID].vector, v.vector)
-
 	eps := make([]element, 0, 1)
-	eps = append(eps, element{id: h.entrypointID, distance: dist})
-
-	currentMaxLayer := h.currentMaxLayer
-	vertexLayer := h.calculateLevelForVertex()
+	eps = append(eps, element{id: entrypointID, distance: dist})
 
 	v.Init(vertexLayer+1, h.mMax, h.mMax0)
 
@@ -154,7 +164,6 @@ func (h *Hnsw) Insert(v *Vertex) error {
 
 	// Construction Phase
 	maxConn := h.mMax
-
 	for l := min(currentMaxLayer, vertexLayer); l >= 0; l-- {
 		nearestNeighbors = h.searchLayer(v, eps, h.efConstruction, l)
 		neighbors := h.selectNeighbors(v, nearestNeighbors, h.m, l, h.extendCandidates, h.keepPrunedConnections)
@@ -166,13 +175,20 @@ func (h *Hnsw) Insert(v *Vertex) error {
 		}
 
 		for _, n := range neighbors {
+			h.mu.RLock()
 			nVertex := h.nodes[n]
+			h.mu.RUnlock()
+
+			nVertex.Mu.Lock()
+
 			nVertex.AddConnection(l, v.id)
+			connections := nVertex.GetConnections(l)
 
-			if len(nVertex.GetConnections(l)) > maxConn {
-				elems := make([]element, 0, len(nVertex.GetConnections(l))) // TODO: can be optimized size if we can estimate the num of connections total when extendingNeighbors
+			// pruning connections of neighbour if necessary
+			if len(connections) > maxConn {
+				elems := make([]element, 0, len(connections)) // TODO: can be optimized size if we can estimate the num of connections total when extendingNeighbors
 
-				for _, nn := range nVertex.GetConnections(l) {
+				for _, nn := range connections {
 					elems = append(elems, element{id: nn, distance: h.calculateDistance(v.vector, h.nodes[nn].vector)})
 				}
 
@@ -181,14 +197,20 @@ func (h *Hnsw) Insert(v *Vertex) error {
 				nVertex.SetConnections(l, newNeighbors)
 			}
 
+			nVertex.Mu.Unlock()
+
 		}
 
 		eps = nearestNeighbors
 	}
 
 	if vertexLayer > currentMaxLayer {
+		h.mu.Lock()
+
 		h.entrypointID = v.id
 		h.currentMaxLayer = vertexLayer
+
+		h.mu.Unlock()
 	}
 
 	return nil
@@ -211,13 +233,20 @@ func (h *Hnsw) searchLayer(v *Vertex, eps []element, ef int, level int64) []elem
 			break
 		}
 
+		h.mu.RLock()
 		cVertex := h.nodes[c.id]
+		h.mu.RUnlock()
+
+		cVertex.Mu.RLock()
 		for _, nid := range cVertex.GetConnections(level) {
 			if !visited.Contains(nid) {
 				visited.Add(nid)
 
 				f = nearestNeighbors.Peek().(element)
+
+				h.mu.RLock()
 				neighbour := h.nodes[nid]
+				h.mu.RUnlock()
 
 				dist := h.calculateDistance(neighbour.vector, v.vector)
 				if dist < f.distance || nearestNeighbors.Len() < ef {
@@ -232,6 +261,7 @@ func (h *Hnsw) searchLayer(v *Vertex, eps []element, ef int, level int64) []elem
 				}
 			}
 		}
+		cVertex.Mu.RUnlock()
 
 	}
 
@@ -250,11 +280,18 @@ func (h *Hnsw) selectNeighborsHeuristic(v *Vertex, candidates []element, m int, 
 
 	if extendCandidates {
 		for _, c := range candidates {
-			for _, n := range h.nodes[c.id].GetConnections(level) {
+			h.mu.RLock()
+			cVertex := h.nodes[c.id]
+			h.mu.RUnlock()
+
+			cVertex.Mu.RLock()
+			for _, n := range cVertex.GetConnections(level) {
 				if !visited.Contains(n) {
 					visited.Add(n)
 
+					h.mu.RLock()
 					nVertex := h.nodes[n]
+					h.mu.RUnlock()
 
 					nElem := element{
 						id:       n,
@@ -264,6 +301,7 @@ func (h *Hnsw) selectNeighborsHeuristic(v *Vertex, candidates []element, m int, 
 					heap.Push(workingQ, nElem) // TODO: estimate fixed slice size?
 				}
 			}
+			cVertex.Mu.RUnlock()
 		}
 	}
 
@@ -274,7 +312,13 @@ func (h *Hnsw) selectNeighborsHeuristic(v *Vertex, candidates []element, m int, 
 
 		flag := true
 		for _, r := range result {
-			if h.distFunc(h.nodes[e.id].vector, h.nodes[r].vector) < e.distance {
+
+			h.mu.RLock()
+			eVertex := h.nodes[e.id]
+			rVertex := h.nodes[r]
+			h.mu.RUnlock()
+
+			if h.distFunc(eVertex.vector, rVertex.vector) < e.distance {
 				flag = false
 				break
 			}
