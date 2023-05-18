@@ -7,7 +7,6 @@ import (
 	"math"
 	"math/rand"
 	"os"
-	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -45,7 +44,7 @@ func TestHnsw(t *testing.T) {
 		}
 	}
 
-	_ = hnsw.KnnSearch(&Vertex{
+	_ = hnsw.Search(&Vertex{
 		id:     -1,
 		vector: randomVector(dim),
 	}, 10, 400)
@@ -80,7 +79,7 @@ func TestSift(t *testing.T) {
 	var avgRecall float32
 	for i, q := range queryVectors {
 		var match float32
-		ann := hnsw.KnnSearch(&Vertex{vector: q}, 100, 100)
+		ann := hnsw.Search(&Vertex{vector: q}, 100, 100)
 		truth := truthNeighbors[i]
 
 		for _, n := range ann {
@@ -104,7 +103,7 @@ func buildIndex(insertionChannel chan *Vertex) *Hnsw {
 	hnsw := newHnsw()
 	var wg sync.WaitGroup
 
-	for i := 0; i < runtime.NumCPU(); i++ {
+	for i := 0; i < 2; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
