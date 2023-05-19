@@ -1,10 +1,7 @@
 package hnsw
 
-import "sync"
-
 // Vertex struct in a multi-layer graph
 type Vertex struct {
-	Mu          sync.RWMutex
 	id          int64
 	connections [][]int64
 

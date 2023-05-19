@@ -103,9 +103,9 @@ func buildIndex(insertionChannel chan *Vertex) *Hnsw {
 	hnsw := newHnsw()
 	var wg sync.WaitGroup
 
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 1; i++ {
 		wg.Add(1)
-		go func() {
+		go func(i int) {
 			defer wg.Done()
 
 			for {
@@ -120,7 +120,7 @@ func buildIndex(insertionChannel chan *Vertex) *Hnsw {
 					return
 				}
 			}
-		}()
+		}(i)
 	}
 
 	wg.Wait()
@@ -155,7 +155,7 @@ func loadSiftBaseVectors(path string, insertionChannel chan *Vertex) {
 
 		}
 
-		if (i+1)%1000 == 0 {
+		if (i+1)%1 == 0 {
 			log.Printf("loaded %d vectors", i+1)
 		}
 
@@ -163,6 +163,60 @@ func loadSiftBaseVectors(path string, insertionChannel chan *Vertex) {
 	}
 
 	close(insertionChannel)
+
+	//cpus := runtime.NumCPU()
+	//vectorsCount := 10000
+	//chunkSize := vectorsCount / cpus
+	//remainder := vectorsCount % cpus
+	//
+	//chunkSizes := make([]int, cpus)
+	//for i := 0; i < len(chunkSizes); i++ {
+	//	chunkSizes[i] = chunkSize
+	//}
+	//
+	//chunkSizes[len(chunkSizes)-1] += remainder
+	//
+	//var wg sync.WaitGroup
+	//wg.Add(cpus)
+	//for i := 0; i < cpus; i++ {
+	//	go func(chunkNum int) {
+	//		defer wg.Done()
+	//
+	//		f, err = os.Open(path)
+	//		if err != nil {
+	//			log.Fatal(err)
+	//		}
+	//
+	//		defer f.Close()
+	//
+	//		offset := chunkNum*chunkSize*int(dim)*4 + 4 // +4 for dimension at the beginning
+	//		_, err = f.Seek(int64(offset), 0)
+	//		if err != nil {
+	//			log.Fatal(err)
+	//		}
+	//
+	//		for j := 0; j < chunkSizes[chunkNum]; j++ {
+	//			v := Vertex{
+	//				id:     int64(chunkNum*chunkSize + j),
+	//				vector: make([]float32, dim),
+	//			}
+	//
+	//			for l := 0; l < int(dim); l++ {
+	//				v.vector[l], err = readFloat32(f)
+	//				if err != nil {
+	//					log.Fatal(err)
+	//				}
+	//			}
+	//
+	//			insertionChannel <- &v
+	//		}
+	//	}(i)
+	//}
+	//
+	//go func() {
+	//	wg.Wait()
+	//	close(insertionChannel)
+	//}()
 }
 
 func loadSiftQueryVectors(path string) [][]float32 {
