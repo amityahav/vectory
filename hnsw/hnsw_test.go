@@ -2,7 +2,9 @@ package hnsw
 
 import (
 	"Vectory/hnsw/distance"
+	bufio2 "bufio"
 	"encoding/binary"
+	"io"
 	"log"
 	"math"
 	"math/rand"
@@ -35,8 +37,8 @@ func TestHnsw(t *testing.T) {
 
 	for i := 0; i < 1000; i++ {
 		err := hnsw.Insert(&Vertex{
-			id:     int64(i),
-			vector: randomVector(dim),
+			Id:     int64(i),
+			Vector: randomVector(dim),
 		})
 
 		if err != nil {
@@ -45,8 +47,8 @@ func TestHnsw(t *testing.T) {
 	}
 
 	_ = hnsw.Search(&Vertex{
-		id:     -1,
-		vector: randomVector(dim),
+		Id:     -1,
+		Vector: randomVector(dim),
 	}, 10, 400)
 
 }
@@ -62,41 +64,41 @@ func randomVector(dim int) []float32 {
 }
 
 func TestSift(t *testing.T) {
-	insertionChannel := make(chan *Vertex)
+	//insertionChannel := make(chan *Vertex)
 
 	// Building index
 	start := time.Now()
-	go loadSiftBaseVectors("./siftsmall/siftsmall_base.fvecs", insertionChannel)
-	hnsw := buildIndex(insertionChannel)
+	vertices := loadSiftBaseVectors("./siftsmall/siftsmall_base.fvecs")
+	print(vertices)
+	//hnsw := buildIndex(insertionChannel)
 	end := time.Since(start)
 
-	log.Printf("Building index took: %s", end.String())
-
+	log.Printf("Loading vectors took: %s", end.String())
 	// Searching index
-	queryVectors := loadSiftQueryVectors("./siftsmall/siftsmall_query.fvecs")
-	truthNeighbors := loadSiftTruthVectors("./siftsmall/siftsmall_groundtruth.ivecs")
+	//queryVectors := loadSiftQueryVectors("./siftsmall/siftsmall_query.fvecs")
+	//truthNeighbors := loadSiftTruthVectors("./siftsmall/siftsmall_groundtruth.ivecs")
 
-	var avgRecall float32
-	for i, q := range queryVectors {
-		var match float32
-		ann := hnsw.Search(&Vertex{vector: q}, 100, 100)
-		truth := truthNeighbors[i]
+	//var avgRecall float32
+	//for i, q := range queryVectors {
+	//	var match float32
+	//	ann := hnsw.Search(&Vertex{Vector: q}, 100, 100)
+	//	truth := truthNeighbors[i]
+	//
+	//	for _, n := range ann {
+	//		for _, tn := range truth {
+	//			if n == tn {
+	//				match++
+	//				break
+	//			}
+	//		}
+	//	}
+	//
+	//	avgRecall += match
+	//}
+	//
+	//avgRecall /= float32(len(queryVectors))
 
-		for _, n := range ann {
-			for _, tn := range truth {
-				if n == tn {
-					match++
-					break
-				}
-			}
-		}
-
-		avgRecall += match
-	}
-
-	avgRecall /= float32(len(queryVectors))
-
-	log.Printf("avg recall: %f", avgRecall)
+	//log.Printf("avg recall: %f", avgRecall)
 }
 
 func buildIndex(insertionChannel chan *Vertex) *Hnsw {
@@ -128,95 +130,46 @@ func buildIndex(insertionChannel chan *Vertex) *Hnsw {
 	return hnsw
 }
 
-func loadSiftBaseVectors(path string, insertionChannel chan *Vertex) {
+func loadSiftBaseVectors(path string) []*Vertex {
+	s := make([]*Vertex, 0, 10000)
+
 	f, err := os.Open(path)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	buf := bufio2.NewReader(f)
+	b := make([]byte, 4)
+
 	defer f.Close()
 
-	dim, err := readUint32(f)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	for i := 0; i < 10000; i++ {
+		dim, err := readUint32(buf, b)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		v := Vertex{
-			id:     int64(i),
-			vector: make([]float32, dim),
+			Id:     int64(i),
+			Vector: make([]float32, dim),
 		}
 
 		for j := 0; j < int(dim); j++ {
-			v.vector[j], err = readFloat32(f)
+			v.Vector[j], err = readFloat32(buf, b)
 			if err != nil {
 				log.Fatal(err)
 			}
 
 		}
 
+		s = append(s, &v)
+
 		if (i+1)%1 == 0 {
 			log.Printf("loaded %d vectors", i+1)
 		}
-
-		insertionChannel <- &v
 	}
 
-	close(insertionChannel)
-
-	//cpus := runtime.NumCPU()
-	//vectorsCount := 10000
-	//chunkSize := vectorsCount / cpus
-	//remainder := vectorsCount % cpus
-	//
-	//chunkSizes := make([]int, cpus)
-	//for i := 0; i < len(chunkSizes); i++ {
-	//	chunkSizes[i] = chunkSize
-	//}
-	//
-	//chunkSizes[len(chunkSizes)-1] += remainder
-	//
-	//var wg sync.WaitGroup
-	//wg.Add(cpus)
-	//for i := 0; i < cpus; i++ {
-	//	go func(chunkNum int) {
-	//		defer wg.Done()
-	//
-	//		f, err = os.Open(path)
-	//		if err != nil {
-	//			log.Fatal(err)
-	//		}
-	//
-	//		defer f.Close()
-	//
-	//		offset := chunkNum*chunkSize*int(dim)*4 + 4 // +4 for dimension at the beginning
-	//		_, err = f.Seek(int64(offset), 0)
-	//		if err != nil {
-	//			log.Fatal(err)
-	//		}
-	//
-	//		for j := 0; j < chunkSizes[chunkNum]; j++ {
-	//			v := Vertex{
-	//				id:     int64(chunkNum*chunkSize + j),
-	//				vector: make([]float32, dim),
-	//			}
-	//
-	//			for l := 0; l < int(dim); l++ {
-	//				v.vector[l], err = readFloat32(f)
-	//				if err != nil {
-	//					log.Fatal(err)
-	//				}
-	//			}
-	//
-	//			insertionChannel <- &v
-	//		}
-	//	}(i)
-	//}
-	//
-	//go func() {
-	//	wg.Wait()
-	//	close(insertionChannel)
-	//}()
+	return s
 }
 
 func loadSiftQueryVectors(path string) [][]float32 {
@@ -227,7 +180,9 @@ func loadSiftQueryVectors(path string) [][]float32 {
 
 	defer f.Close()
 
-	dim, err := readUint32(f)
+	buf := bufio2.NewReader(f)
+	b := make([]byte, 4)
+	dim, err := readUint32(buf, b)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -238,7 +193,7 @@ func loadSiftQueryVectors(path string) [][]float32 {
 		vectors[i] = make([]float32, dim)
 
 		for j := 0; j < int(dim); j++ {
-			vectors[i][j], err = readFloat32(f)
+			vectors[i][j], err = readFloat32(buf, b)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -255,8 +210,10 @@ func loadSiftTruthVectors(path string) [][]int64 {
 	}
 
 	defer f.Close()
+	buf := bufio2.NewReader(f)
+	b := make([]byte, 4)
 
-	dim, err := readUint32(f)
+	dim, err := readUint32(buf, b)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -267,7 +224,7 @@ func loadSiftTruthVectors(path string) [][]int64 {
 		vectors[i] = make([]int64, dim)
 
 		for j := 0; j < int(dim); j++ {
-			fl32, err := readUint32(f)
+			fl32, err := readUint32(buf, b)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -279,8 +236,7 @@ func loadSiftTruthVectors(path string) [][]int64 {
 	return vectors
 }
 
-func readUint32(f *os.File) (uint32, error) {
-	b := make([]byte, 4)
+func readUint32(f io.Reader, b []byte) (uint32, error) {
 	_, err := f.Read(b)
 	if err != nil {
 		return 0, err
@@ -289,8 +245,7 @@ func readUint32(f *os.File) (uint32, error) {
 	return binary.LittleEndian.Uint32(b), nil
 }
 
-func readFloat32(f *os.File) (float32, error) {
-	b := make([]byte, 4)
+func readFloat32(f io.Reader, b []byte) (float32, error) {
 	_, err := f.Read(b)
 	if err != nil {
 		return 0, err

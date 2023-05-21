@@ -2,10 +2,10 @@ package hnsw
 
 // Vertex struct in a multi-layer graph
 type Vertex struct {
-	id          int64
+	Id          int64
 	connections [][]int64
 
-	vector []float32
+	Vector []float32
 }
 
 func (v *Vertex) Init(level int64, mMax, mMax0 int) {
