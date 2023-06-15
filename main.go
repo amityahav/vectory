@@ -4,7 +4,6 @@ import (
 	"Vectory/hnsw"
 	bufio2 "bufio"
 	"encoding/binary"
-	"github.com/pkg/profile"
 	"io"
 	"log"
 	"math"
@@ -14,9 +13,9 @@ import (
 )
 
 func main() {
-	defer profile.Start(profile.TraceProfile, profile.ProfilePath(".")).Stop()
-	concurrent()
-	//sequential()
+	//defer profile.Start(profile.TraceProfile, profile.ProfilePath(".")).Stop()
+	//concurrent()
+	sequential()
 
 }
 

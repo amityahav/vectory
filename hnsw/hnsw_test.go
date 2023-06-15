@@ -9,6 +9,7 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -18,7 +19,7 @@ func newHnsw() *Hnsw {
 	cfg := hnswConfig{
 		m:                     32,
 		mMax:                  32,
-		efConstruction:        400,
+		efConstruction:        128,
 		heuristic:             true,
 		distanceType:          distance.Euclidean,
 		extendCandidates:      true,
@@ -64,44 +65,63 @@ func randomVector(dim int) []float32 {
 }
 
 func TestSift(t *testing.T) {
-	//insertionChannel := make(chan *Vertex)
-
-	// Building index
+	// Loading vectors
 	start := time.Now()
 	vertices := loadSiftBaseVectors("./siftsmall/siftsmall_base.fvecs")
-	print(vertices)
-	//hnsw := buildIndex(insertionChannel)
 	end := time.Since(start)
-
 	log.Printf("Loading vectors took: %s", end.String())
+
+	// Building index
+	start = time.Now()
+	hnsw := buildIndexSequential(vertices)
+	end = time.Since(start)
+	log.Printf("Inserting vectors took: %s", end.String())
+
 	// Searching index
-	//queryVectors := loadSiftQueryVectors("./siftsmall/siftsmall_query.fvecs")
-	//truthNeighbors := loadSiftTruthVectors("./siftsmall/siftsmall_groundtruth.ivecs")
+	queryVectors := loadSiftQueryVectors("./siftsmall/siftsmall_query.fvecs")
+	truthNeighbors := loadSiftTruthVectors("./siftsmall/siftsmall_groundtruth.ivecs")
 
-	//var avgRecall float32
-	//for i, q := range queryVectors {
-	//	var match float32
-	//	ann := hnsw.Search(&Vertex{Vector: q}, 100, 100)
-	//	truth := truthNeighbors[i]
-	//
-	//	for _, n := range ann {
-	//		for _, tn := range truth {
-	//			if n == tn {
-	//				match++
-	//				break
-	//			}
-	//		}
-	//	}
-	//
-	//	avgRecall += match
-	//}
-	//
-	//avgRecall /= float32(len(queryVectors))
+	var avgRecall float32
+	for i, q := range queryVectors {
+		var match float32
+		ann := hnsw.Search(&Vertex{Vector: q}, 100, 64)
+		truth := truthNeighbors[i]
 
-	//log.Printf("avg recall: %f", avgRecall)
+		for _, n := range ann {
+			for _, tn := range truth {
+				if n == tn {
+					match++
+					break
+				}
+			}
+		}
+
+		avgRecall += match
+
+		log.Printf("recall for V#%d: %f", i, match/float32(len(ann)))
+	}
+
+	avgRecall /= float32(len(queryVectors) * len(queryVectors))
+
+	log.Printf("avg recall: %f", avgRecall)
 }
 
-func buildIndex(insertionChannel chan *Vertex) *Hnsw {
+func buildIndexSequential(vertices []*Vertex) *Hnsw {
+	hnsw := newHnsw()
+
+	for i, v := range vertices {
+		err := hnsw.Insert(v)
+		if err != nil {
+			log.Printf("failed inserting V#%d. err: %s", v.Id, err.Error())
+		}
+
+		log.Printf("Inserted %d vertices", i)
+	}
+
+	return hnsw
+}
+
+func buildIndexParallel(insertionChannel chan *Vertex) *Hnsw {
 	hnsw := newHnsw()
 	var wg sync.WaitGroup
 
@@ -131,6 +151,75 @@ func buildIndex(insertionChannel chan *Vertex) *Hnsw {
 }
 
 func loadSiftBaseVectors(path string) []*Vertex {
+	return sequential(path)
+}
+
+func loadSiftQueryVectors(path string) [][]float32 {
+	f, err := os.Open(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer f.Close()
+
+	buf := bufio2.NewReader(f)
+	b := make([]byte, 4)
+
+	vectors := make([][]float32, 100)
+
+	for i := 0; i < 100; i++ {
+		dim, err := readUint32(buf, b)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		vectors[i] = make([]float32, dim)
+
+		for j := 0; j < int(dim); j++ {
+			vectors[i][j], err = readFloat32(buf, b)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
+
+	return vectors
+}
+
+func loadSiftTruthVectors(path string) [][]int64 {
+	f, err := os.Open(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer f.Close()
+	buf := bufio2.NewReader(f)
+	b := make([]byte, 4)
+
+	vectors := make([][]int64, 100)
+
+	for i := 0; i < 100; i++ {
+		dim, err := readUint32(buf, b)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		vectors[i] = make([]int64, dim)
+
+		for j := 0; j < int(dim); j++ {
+			fl32, err := readUint32(buf, b)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			vectors[i][j] = int64(fl32)
+		}
+	}
+
+	return vectors
+}
+
+func sequential(path string) []*Vertex {
 	s := make([]*Vertex, 0, 10000)
 
 	f, err := os.Open(path)
@@ -163,77 +252,77 @@ func loadSiftBaseVectors(path string) []*Vertex {
 		}
 
 		s = append(s, &v)
-
-		if (i+1)%1 == 0 {
-			log.Printf("loaded %d vectors", i+1)
-		}
 	}
 
 	return s
 }
+func concurrent() {
+	insertionChannel := make(chan *Vertex)
+	cpus := runtime.NumCPU()
+	vectorsCount := 10000
+	chunkSize := vectorsCount / cpus
+	remainder := vectorsCount % cpus
 
-func loadSiftQueryVectors(path string) [][]float32 {
-	f, err := os.Open(path)
-	if err != nil {
-		log.Fatal(err)
+	chunkSizes := make([]int, cpus)
+	for i := 0; i < len(chunkSizes); i++ {
+		chunkSizes[i] = chunkSize
 	}
 
-	defer f.Close()
+	chunkSizes[len(chunkSizes)-1] += remainder
 
-	buf := bufio2.NewReader(f)
-	b := make([]byte, 4)
-	dim, err := readUint32(buf, b)
-	if err != nil {
-		log.Fatal(err)
-	}
+	var wg sync.WaitGroup
+	wg.Add(cpus)
+	for i := 0; i < cpus; i++ {
+		go func(chunkNum int) {
+			defer wg.Done()
 
-	vectors := make([][]float32, 100)
-
-	for i := 0; i < 100; i++ {
-		vectors[i] = make([]float32, dim)
-
-		for j := 0; j < int(dim); j++ {
-			vectors[i][j], err = readFloat32(buf, b)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-	}
-
-	return vectors
-}
-
-func loadSiftTruthVectors(path string) [][]int64 {
-	f, err := os.Open(path)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	defer f.Close()
-	buf := bufio2.NewReader(f)
-	b := make([]byte, 4)
-
-	dim, err := readUint32(buf, b)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	vectors := make([][]int64, 100)
-
-	for i := 0; i < 100; i++ {
-		vectors[i] = make([]int64, dim)
-
-		for j := 0; j < int(dim); j++ {
-			fl32, err := readUint32(buf, b)
+			f, err := os.Open("hnsw/siftsmall/siftsmall_base.fvecs")
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			vectors[i][j] = int64(fl32)
-		}
+			defer f.Close()
+
+			buf := bufio2.NewReader(f)
+			b := make([]byte, 4)
+
+			offset := chunkNum * chunkSize * (128*4 + 4)
+			_, err = f.Seek(int64(offset), 0)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			for j := 0; j < chunkSizes[chunkNum]; j++ {
+				dim, err := readUint32(buf, b)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				v := Vertex{
+					Id:     int64(chunkNum*chunkSize + j),
+					Vector: make([]float32, dim),
+				}
+
+				for l := 0; l < int(dim); l++ {
+					v.Vector[l], err = readFloat32(buf, b)
+					if err != nil {
+						log.Fatal(err)
+					}
+				}
+
+				insertionChannel <- &v
+			}
+		}(i)
 	}
 
-	return vectors
+	go func() {
+		wg.Wait()
+		close(insertionChannel)
+	}()
+
+	for v := range insertionChannel {
+		log.Printf("Loaded V#%d", v.Id)
+	}
 }
 
 func readUint32(f io.Reader, b []byte) (uint32, error) {
