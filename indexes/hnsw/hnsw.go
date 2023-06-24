@@ -1,7 +1,8 @@
 package hnsw
 
 import (
-	"Vectory/hnsw/distance"
+	"Vectory/indexes"
+	"Vectory/indexes/distance"
 	"container/heap"
 	"fmt"
 	"math"
@@ -17,7 +18,7 @@ type Hnsw struct {
 
 	nodes           map[int64]*Vertex
 	distFunc        func([]float32, []float32) float32
-	selectNeighbors func(*Vertex, []element, int, int64, bool, bool) []int64
+	selectNeighbors func(*Vertex, []indexes.Element, int, int64, bool, bool) []int64
 
 	initialInsertion *sync.Once
 	mu               sync.RWMutex
@@ -84,7 +85,7 @@ func (h *Hnsw) Search(v *Vertex, k, ef int) []int64 {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
-	var currentNearestElements []element
+	var currentNearestElements []indexes.Element
 
 	res := make([]int64, 0, k)
 
@@ -94,8 +95,8 @@ func (h *Hnsw) Search(v *Vertex, k, ef int) []int64 {
 
 	dist := h.calculateDistance(epVertex.Vector, v.Vector)
 
-	eps := make([]element, 0, 1)
-	eps = append(eps, element{id: entrypointID, distance: dist})
+	eps := make([]indexes.Element, 0, 1)
+	eps = append(eps, indexes.Element{Id: entrypointID, Distance: dist})
 
 	for l := currentMaxLayer; l > 0; l-- {
 		currentNearestElements = h.searchLayer(v, eps, 1, l)
@@ -104,10 +105,10 @@ func (h *Hnsw) Search(v *Vertex, k, ef int) []int64 {
 
 	currentNearestElements = h.searchLayer(v, eps, ef, 0)
 
-	minHeap := NewMinHeapFromSlice(currentNearestElements)
+	minHeap := indexes.NewMinHeapFromSlice(currentNearestElements)
 
 	for i := 0; i < k && minHeap.Len() > 0; i++ {
-		res = append(res, heap.Pop(minHeap).(element).id)
+		res = append(res, heap.Pop(minHeap).(indexes.Element).Id)
 	}
 
 	return res
@@ -151,10 +152,10 @@ func (h *Hnsw) Insert(v *Vertex) error {
 	vertexLayer := h.calculateLevelForVertex()
 	dist := h.calculateDistance(epVertex.Vector, v.Vector)
 
-	var nearestNeighbors []element
+	var nearestNeighbors []indexes.Element
 
-	eps := make([]element, 0, 1)
-	eps = append(eps, element{id: entrypointID, distance: dist})
+	eps := make([]indexes.Element, 0, 1)
+	eps = append(eps, indexes.Element{Id: entrypointID, Distance: dist})
 
 	v.Init(vertexLayer+1, h.mMax, h.mMax0)
 
@@ -183,12 +184,12 @@ func (h *Hnsw) Insert(v *Vertex) error {
 
 			// pruning connections of neighbour if necessary
 			if len(connections) > maxConn {
-				elems := make([]element, 0, len(connections)) // TODO: can be optimized size if we can estimate the num of connections total when extendingNeighbors
+				elems := make([]indexes.Element, 0, len(connections)) // TODO: can be optimized size if we can estimate the num of connections total when extendingNeighbors
 
 				for _, nn := range connections {
 					nnVertex := h.nodes[nn]
 
-					elems = append(elems, element{id: nn, distance: h.calculateDistance(nVertex.Vector, nnVertex.Vector)})
+					elems = append(elems, indexes.Element{Id: nn, Distance: h.calculateDistance(nVertex.Vector, nnVertex.Vector)})
 				}
 
 				newNeighbors := h.selectNeighbors(nVertex, elems, maxConn, l, h.extendCandidates, h.keepPrunedConnections)
@@ -208,34 +209,34 @@ func (h *Hnsw) Insert(v *Vertex) error {
 	return nil
 }
 
-func (h *Hnsw) searchLayer(v *Vertex, eps []element, ef int, level int64) []element {
+func (h *Hnsw) searchLayer(v *Vertex, eps []indexes.Element, ef int, level int64) []indexes.Element {
 	visited := NewSet[int64]()
 	for _, e := range eps {
-		visited.Add(e.id)
+		visited.Add(e.Id)
 	}
 
-	candidates := NewMinHeapFromSliceDeep(eps, ef+1)
-	nearestNeighbors := NewMaxHeapFromSliceDeep(eps, ef+1)
+	candidates := indexes.NewMinHeapFromSliceDeep(eps, ef+1)
+	nearestNeighbors := indexes.NewMaxHeapFromSliceDeep(eps, ef+1)
 
 	for candidates.Len() > 0 {
-		c := heap.Pop(candidates).(element)
-		f := nearestNeighbors.Peek().(element)
+		c := heap.Pop(candidates).(indexes.Element)
+		f := nearestNeighbors.Peek().(indexes.Element)
 
-		if c.distance > f.distance {
+		if c.Distance > f.Distance {
 			break
 		}
 
-		cVertex := h.nodes[c.id]
+		cVertex := h.nodes[c.Id]
 		for _, nid := range cVertex.GetConnections(level) {
 			if !visited.Contains(nid) {
 				visited.Add(nid)
 
-				f = nearestNeighbors.Peek().(element)
+				f = nearestNeighbors.Peek().(indexes.Element)
 				neighbour := h.nodes[nid]
 
 				dist := h.calculateDistance(neighbour.Vector, v.Vector)
-				if dist < f.distance || nearestNeighbors.Len() < ef {
-					e := element{id: nid, distance: dist}
+				if dist < f.Distance || nearestNeighbors.Len() < ef {
+					e := indexes.Element{Id: nid, Distance: dist}
 
 					heap.Push(candidates, e)
 					heap.Push(nearestNeighbors, e)
@@ -248,31 +249,31 @@ func (h *Hnsw) searchLayer(v *Vertex, eps []element, ef int, level int64) []elem
 		}
 	}
 
-	return nearestNeighbors.elements
+	return nearestNeighbors.Elements
 }
 
-func (h *Hnsw) selectNeighborsHeuristic(v *Vertex, candidates []element, m int, level int64, extendCandidates, keepPruned bool) []int64 {
+func (h *Hnsw) selectNeighborsHeuristic(v *Vertex, candidates []indexes.Element, m int, level int64, extendCandidates, keepPruned bool) []int64 {
 	result := make([]int64, 0, m)
 
-	workingQ := NewMinHeapFromSliceDeep(candidates, cap(candidates))
+	workingQ := indexes.NewMinHeapFromSliceDeep(candidates, cap(candidates))
 
 	visited := NewSet[int64]()
 	for _, c := range candidates {
-		visited.Add(c.id)
+		visited.Add(c.Id)
 	}
 
 	if extendCandidates {
 		for _, c := range candidates {
-			cVertex := h.nodes[c.id]
+			cVertex := h.nodes[c.Id]
 
 			for _, n := range cVertex.GetConnections(level) {
 				if !visited.Contains(n) && v.Id != n {
 					visited.Add(n)
 					nVertex := h.nodes[n]
 
-					nElem := element{
-						id:       n,
-						distance: h.calculateDistance(v.Vector, nVertex.Vector),
+					nElem := indexes.Element{
+						Id:       n,
+						Distance: h.calculateDistance(v.Vector, nVertex.Vector),
 					}
 
 					heap.Push(workingQ, nElem) // TODO: estimate fixed slice size?
@@ -281,50 +282,50 @@ func (h *Hnsw) selectNeighborsHeuristic(v *Vertex, candidates []element, m int, 
 		}
 	}
 
-	var discards []element // TODO: figure out optimal fixed size
+	var discards []indexes.Element // TODO: figure out optimal fixed size
 
 	for workingQ.Len() > 0 && len(result) < m {
-		e := heap.Pop(workingQ).(element)
+		e := heap.Pop(workingQ).(indexes.Element)
 
 		flag := true
 		for _, r := range result {
-			eVertex := h.nodes[e.id]
+			eVertex := h.nodes[e.Id]
 			rVertex := h.nodes[r]
 
-			if h.distFunc(eVertex.Vector, rVertex.Vector) < e.distance {
+			if h.distFunc(eVertex.Vector, rVertex.Vector) < e.Distance {
 				flag = false
 				break
 			}
 		}
 
 		if flag {
-			result = append(result, e.id)
+			result = append(result, e.Id)
 		} else {
 			discards = append(discards, e)
 		}
 	}
 
 	if keepPruned {
-		discardedHeap := NewMinHeapFromSlice(discards)
+		discardedHeap := indexes.NewMinHeapFromSlice(discards)
 		for discardedHeap.Len() > 0 && len(result) < m {
-			result = append(result, heap.Pop(discardedHeap).(element).id)
+			result = append(result, heap.Pop(discardedHeap).(indexes.Element).Id)
 		}
 	}
 
 	return result
 }
 
-func (h *Hnsw) selectNeighborsSimple(_ *Vertex, candidates []element, m int, _ int64, _, _ bool) []int64 {
+func (h *Hnsw) selectNeighborsSimple(_ *Vertex, candidates []indexes.Element, m int, _ int64, _, _ bool) []int64 {
 	size := m
 	if len(candidates) < size {
 		size = len(candidates)
 	}
 
-	minHeap := NewMinHeapFromSliceDeep(candidates, cap(candidates))
+	minHeap := indexes.NewMinHeapFromSliceDeep(candidates, cap(candidates))
 	neighbors := make([]int64, 0, size)
 
 	for i := 0; i < size; i++ {
-		neighbors = append(neighbors, heap.Pop(minHeap).(element).id)
+		neighbors = append(neighbors, heap.Pop(minHeap).(indexes.Element).Id)
 	}
 
 	return neighbors

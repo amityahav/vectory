@@ -2,12 +2,6 @@
 
 package main
 
-import (
-	. "github.com/mmcloughlin/avo/build"
-	. "github.com/mmcloughlin/avo/operand"
-	. "github.com/mmcloughlin/avo/reg"
-)
-
 var unroll = 6
 
 // Taken from the avo library
