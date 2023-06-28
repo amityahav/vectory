@@ -4,8 +4,8 @@ import "sync"
 
 // Api - DiskANN API
 type Api interface {
-	// Insert a new vector to the RW-Index
-	Insert(vector []float32) error
+	// Insert a new vector and its corresponding data to the RW-Index
+	Insert(vector []float32, data any) error
 
 	// Delete Lazy deletion of vertex v
 	Delete(id uint32)
@@ -16,22 +16,26 @@ type Api interface {
 
 type DiskAnn struct {
 	sync.RWMutex
-	rwIndex              *MemoryIndex
-	roIndexes            []*MemoryIndex
-	deletedIds           *sync.Map
+
+	rwIndex   *MemoryIndex
+	roIndexes []*MemoryIndex
+	ltIndex   *DiskIndex
+
+	deletedIds *sync.Map
+
+	currId               uint32
 	memoryIndexSizeLimit int
-	ltIndex              string
 }
 
 func NewDiskAnn() *DiskAnn {
 	da := DiskAnn{
 		deletedIds:           &sync.Map{},
 		roIndexes:            nil,
+		currId:               0,
 		memoryIndexSizeLimit: 0,
-		ltIndex:              "",
 	}
 
-	da.rwIndex = newMemoryIndex(0, da.deletedIds)
+	da.rwIndex = newMemoryIndex(da.deletedIds)
 
 	return &da
 }
@@ -40,17 +44,25 @@ func NewDiskAnn() *DiskAnn {
 func Load() {
 }
 
-func (da *DiskAnn) Insert(vector []float32) error {
+func (da *DiskAnn) Insert(vector []float32, data any) error {
 	da.Lock()
 	if da.rwIndex.graph.size() == da.memoryIndexSizeLimit {
 		da.rwIndex.ReadOnly()
 		go da.rwIndex.Snapshot()
 		da.roIndexes = append(da.roIndexes, da.rwIndex)
-		da.rwIndex = newMemoryIndex(da.rwIndex.currId, da.deletedIds)
+		da.rwIndex = newMemoryIndex(da.deletedIds)
 	}
 	da.Unlock()
 
-	err := da.rwIndex.Insert(vector)
+	// TODO: insert data to some datastore and keep its identifier
+	var dataId uint32
+
+	da.Lock()
+	currId := da.currId
+	da.currId += 1
+	da.Unlock()
+
+	err := da.rwIndex.Insert(vector, currId, dataId)
 	if err != nil {
 		return err
 	}
@@ -60,6 +72,8 @@ func (da *DiskAnn) Insert(vector []float32) error {
 
 func (da *DiskAnn) Delete(id uint32) bool {
 	da.deletedIds.Store(id, struct{}{})
+
+	// TODO: remove data from the datastore
 
 	return true
 }

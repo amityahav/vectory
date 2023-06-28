@@ -1,4 +1,4 @@
-package indexes
+package utils
 
 import "container/heap"
 
@@ -27,6 +27,7 @@ func (h *Heap) Pop() any {
 	n := len(old)
 	x := old[n-1]
 	h.Elements = old[0 : n-1]
+
 	return x
 }
 

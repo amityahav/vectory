@@ -1,4 +1,4 @@
-package indexes
+package utils
 
 import (
 	"fmt"
