@@ -1,8 +1,8 @@
 package hnsw
 
 import (
-	"Vectory/core/indexes/distance"
-	"Vectory/core/indexes/utils"
+	"Vectory/db/core/indexes/distance"
+	"Vectory/db/core/indexes/utils"
 	"container/heap"
 	"fmt"
 	"math"

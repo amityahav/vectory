@@ -1,7 +1,7 @@
 package disk_ann
 
 import (
-	"Vectory/core/indexes/utils"
+	"Vectory/db/core/indexes/utils"
 	"container/heap"
 	"sync"
 )
@@ -10,13 +10,7 @@ type MemoryIndex struct {
 	sync.RWMutex
 	graph             *Graph
 	calculateDistance func([]float32, []float32) float32
-	deletedDataIds    *sync.Map
-
-	// search list size
-	l int
-
-	// distance threshold
-	a int
+	deletedObjIds     *sync.Map
 
 	// starting point
 	s uint32
@@ -25,11 +19,11 @@ type MemoryIndex struct {
 	snapshotPath string
 }
 
-func newMemoryIndex(deletedDataIds *sync.Map) *MemoryIndex {
+func newMemoryIndex(deletedObjIds *sync.Map) *MemoryIndex {
 	mi := MemoryIndex{
 		graph:             nil,
 		calculateDistance: nil,
-		deletedDataIds:    deletedDataIds,
+		deletedObjIds:     deletedObjIds,
 		readOnly:          false,
 		snapshotPath:      "",
 	}
@@ -38,7 +32,7 @@ func newMemoryIndex(deletedDataIds *sync.Map) *MemoryIndex {
 }
 
 // TODO: beam search support as well
-func (mi *MemoryIndex) Search(q []float32, k int, searchApi bool) ([]utils.Element, []utils.Element) {
+func (mi *MemoryIndex) Search(q []float32, k int, listSize int, onlySearch bool) ([]utils.Element, []utils.Element) {
 	// TODO: locking
 	sVertex := mi.graph.vertices[mi.s]
 	e := utils.Element{
@@ -46,7 +40,7 @@ func (mi *MemoryIndex) Search(q []float32, k int, searchApi bool) ([]utils.Eleme
 		Distance: mi.calculateDistance(sVertex.Vector, q),
 	}
 
-	if searchApi {
+	if onlySearch {
 		e.DataId = sVertex.DataId
 	}
 
@@ -67,7 +61,7 @@ func (mi *MemoryIndex) Search(q []float32, k int, searchApi bool) ([]utils.Eleme
 		minVertex := mi.graph.vertices[uint32(min.Id)]
 
 		// filter deleted vertices from the result
-		if _, ok := mi.deletedDataIds.Load(minVertex.DataId); !ok {
+		if _, ok := mi.deletedObjIds.Load(minVertex.DataId); !ok {
 			candidatesVisited = append(candidatesVisited, min)
 		}
 
@@ -79,20 +73,20 @@ func (mi *MemoryIndex) Search(q []float32, k int, searchApi bool) ([]utils.Eleme
 				Distance: mi.calculateDistance(nVertex.Vector, q),
 			}
 
-			if searchApi {
+			if onlySearch {
 				e.DataId = nVertex.DataId
 			}
 
 			utils.Push(resultSet, e)
 
-			for resultSet.Len() > mi.l {
+			for resultSet.Len() > listSize {
 				utils.PopMax(resultSet)
 			}
 		}
 	}
 
 	// K-NN is returned when search is performed
-	if searchApi {
+	if onlySearch {
 		candidatesHeap := utils.NewMinHeapFromSliceDeep(candidatesVisited, len(candidatesVisited))
 
 		knn := make([]utils.Element, 0, k)
@@ -106,7 +100,7 @@ func (mi *MemoryIndex) Search(q []float32, k int, searchApi bool) ([]utils.Eleme
 	return nil, candidatesVisited
 }
 
-func (mi *MemoryIndex) Insert(v []float32, currId, dataId uint32) error {
+func (mi *MemoryIndex) Insert(v []float32, listSize int, distanceThreshold int, currId, dataId uint32) error {
 	mi.Lock() // TODO: optimize locking
 	defer mi.Unlock()
 
@@ -121,9 +115,9 @@ func (mi *MemoryIndex) Insert(v []float32, currId, dataId uint32) error {
 
 	mi.graph.addVertex(&vertex)
 
-	_, visited := mi.Search(v, 1, false)
+	_, visited := mi.Search(v, 1, listSize, false)
 
-	vertex.Neighbors = mi.RobustPrune(&vertex, visited)
+	vertex.Neighbors = mi.RobustPrune(&vertex, visited, distanceThreshold)
 
 	for _, n := range vertex.Neighbors {
 		neighbor := mi.graph.vertices[n]
@@ -140,7 +134,7 @@ func (mi *MemoryIndex) Insert(v []float32, currId, dataId uint32) error {
 					Distance: mi.calculateDistance(nnVertex.Vector, neighbor.Vector),
 				})
 			}
-			neighbor.Neighbors = mi.RobustPrune(neighbor, distances)
+			neighbor.Neighbors = mi.RobustPrune(neighbor, distances, distanceThreshold)
 		}
 	}
 
@@ -152,7 +146,7 @@ func (mi *MemoryIndex) Delete(id uint32) error {
 	return nil
 }
 
-func (mi *MemoryIndex) RobustPrune(v *Vertex, candidates []utils.Element) []uint32 {
+func (mi *MemoryIndex) RobustPrune(v *Vertex, candidates []utils.Element, distanceThreshold int) []uint32 {
 	// TODO locking
 	deletedCandidates := map[uint32]struct{}{v.Id: {}} // excluding vertex v
 
@@ -185,7 +179,7 @@ func (mi *MemoryIndex) RobustPrune(v *Vertex, candidates []utils.Element) []uint
 			minVertex := mi.graph.vertices[uint32(min.Id)]
 			cVertex := mi.graph.vertices[uint32(c.Id)]
 
-			if float32(mi.a)*mi.calculateDistance(minVertex.Vector, cVertex.Vector) <= c.Distance {
+			if float32(distanceThreshold)*mi.calculateDistance(minVertex.Vector, cVertex.Vector) <= c.Distance {
 				deletedCandidates[cVertex.Id] = struct{}{}
 			}
 		}
