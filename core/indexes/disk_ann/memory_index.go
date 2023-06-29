@@ -1,7 +1,7 @@
 package disk_ann
 
 import (
-	utils2 "Vectory/core/indexes/utils"
+	"Vectory/core/indexes/utils"
 	"container/heap"
 	"sync"
 )
@@ -10,7 +10,7 @@ type MemoryIndex struct {
 	sync.RWMutex
 	graph             *Graph
 	calculateDistance func([]float32, []float32) float32
-	deletedIds        *sync.Map
+	deletedDataIds    *sync.Map
 
 	// search list size
 	l int
@@ -25,11 +25,11 @@ type MemoryIndex struct {
 	snapshotPath string
 }
 
-func newMemoryIndex(deletedIds *sync.Map) *MemoryIndex {
+func newMemoryIndex(deletedDataIds *sync.Map) *MemoryIndex {
 	mi := MemoryIndex{
 		graph:             nil,
 		calculateDistance: nil,
-		deletedIds:        deletedIds,
+		deletedDataIds:    deletedDataIds,
 		readOnly:          false,
 		snapshotPath:      "",
 	}
@@ -38,19 +38,25 @@ func newMemoryIndex(deletedIds *sync.Map) *MemoryIndex {
 }
 
 // TODO: beam search support as well
-func (mi *MemoryIndex) Search(q []float32, k int) ([]uint32, []utils2.Element) {
+func (mi *MemoryIndex) Search(q []float32, k int, searchApi bool) ([]utils.Element, []utils.Element) {
 	// TODO: locking
 	sVertex := mi.graph.vertices[mi.s]
-	resultSet := utils2.NewMinMaxHeapFromSlice([]utils2.Element{{
+	e := utils.Element{
 		Id:       int64(mi.s),
 		Distance: mi.calculateDistance(sVertex.Vector, q),
-	}})
+	}
+
+	if searchApi {
+		e.DataId = sVertex.DataId
+	}
+
+	resultSet := utils.NewMinMaxHeapFromSlice([]utils.Element{e})
 	visited := map[uint32]struct{}{}
 
-	var candidatesVisited []utils2.Element
+	var candidatesVisited []utils.Element
 
 	for resultSet.Len() != 0 {
-		min := utils2.Pop(resultSet).(utils2.Element)
+		min := utils.Pop(resultSet).(utils.Element)
 
 		if _, ok := visited[uint32(min.Id)]; ok {
 			continue
@@ -58,36 +64,46 @@ func (mi *MemoryIndex) Search(q []float32, k int) ([]uint32, []utils2.Element) {
 
 		visited[uint32(min.Id)] = struct{}{}
 
+		minVertex := mi.graph.vertices[uint32(min.Id)]
+
 		// filter deleted vertices from the result
-		if _, ok := mi.deletedIds.Load(uint32(min.Id)); !ok {
+		if _, ok := mi.deletedDataIds.Load(minVertex.DataId); !ok {
 			candidatesVisited = append(candidatesVisited, min)
 		}
-
-		minVertex := mi.graph.vertices[uint32(min.Id)]
 
 		for _, n := range minVertex.Neighbors {
 			nVertex := mi.graph.vertices[n]
 
-			utils2.Push(resultSet, utils2.Element{
+			e = utils.Element{
 				Id:       int64(n),
 				Distance: mi.calculateDistance(nVertex.Vector, q),
-			})
+			}
+
+			if searchApi {
+				e.DataId = nVertex.DataId
+			}
+
+			utils.Push(resultSet, e)
 
 			for resultSet.Len() > mi.l {
-				utils2.PopMax(resultSet)
+				utils.PopMax(resultSet)
 			}
 		}
 	}
 
-	candidatesHeap := utils2.NewMinHeapFromSliceDeep(candidatesVisited, len(candidatesVisited))
+	// K-NN is returned when search is performed
+	if searchApi {
+		candidatesHeap := utils.NewMinHeapFromSliceDeep(candidatesVisited, len(candidatesVisited))
 
-	// TODO: this is unused in the paper do we need it?
-	knn := make([]uint32, 0, k)
-	for i := 0; i < k && candidatesHeap.Len() > 0; i++ {
-		knn = append(knn, uint32(heap.Pop(candidatesHeap).(utils2.Element).Id))
+		knn := make([]utils.Element, 0, k)
+		for i := 0; i < k && candidatesHeap.Len() > 0; i++ {
+			knn = append(knn, heap.Pop(candidatesHeap).(utils.Element))
+		}
+
+		return knn, nil
 	}
 
-	return knn, candidatesVisited
+	return nil, candidatesVisited
 }
 
 func (mi *MemoryIndex) Insert(v []float32, currId, dataId uint32) error {
@@ -97,15 +113,15 @@ func (mi *MemoryIndex) Insert(v []float32, currId, dataId uint32) error {
 	if mi.readOnly {
 		return ErrReadOnlyIndex
 	}
-
-	_, visited := mi.Search(v, 1)
-
 	vertex := Vertex{
 		Id:     currId,
+		DataId: dataId,
 		Vector: v,
 	}
 
 	mi.graph.addVertex(&vertex)
+
+	_, visited := mi.Search(v, 1, false)
 
 	vertex.Neighbors = mi.RobustPrune(&vertex, visited)
 
@@ -115,11 +131,11 @@ func (mi *MemoryIndex) Insert(v []float32, currId, dataId uint32) error {
 		neighbor.Neighbors = append(neighbor.Neighbors, vertex.Id)
 
 		if len(neighbor.Neighbors) > mi.graph.maxDegree {
-			distances := make([]utils2.Element, 0, len(neighbor.Neighbors))
+			distances := make([]utils.Element, 0, len(neighbor.Neighbors))
 
 			for _, nn := range neighbor.Neighbors {
 				nnVertex := mi.graph.vertices[nn]
-				distances = append(distances, utils2.Element{
+				distances = append(distances, utils.Element{
 					Id:       int64(nn),
 					Distance: mi.calculateDistance(nnVertex.Vector, neighbor.Vector),
 				})
@@ -136,13 +152,13 @@ func (mi *MemoryIndex) Delete(id uint32) error {
 	return nil
 }
 
-func (mi *MemoryIndex) RobustPrune(v *Vertex, candidates []utils2.Element) []uint32 {
+func (mi *MemoryIndex) RobustPrune(v *Vertex, candidates []utils.Element) []uint32 {
 	// TODO locking
 	deletedCandidates := map[uint32]struct{}{v.Id: {}} // excluding vertex v
 
 	for _, n := range v.Neighbors {
 		nVertex := mi.graph.vertices[n]
-		e := utils2.Element{
+		e := utils.Element{
 			Id:       int64(n),
 			Distance: mi.calculateDistance(v.Vector, nVertex.Vector),
 		}
@@ -150,11 +166,11 @@ func (mi *MemoryIndex) RobustPrune(v *Vertex, candidates []utils2.Element) []uin
 		candidates = append(candidates, e)
 	}
 
-	candidatesHeap := utils2.NewMinHeapFromSlice(candidates)
+	candidatesHeap := utils.NewMinHeapFromSlice(candidates)
 	newNeighbors := make([]uint32, 0, mi.graph.maxDegree)
 
 	for candidatesHeap.Len() != 0 {
-		min := heap.Pop(candidatesHeap).(utils2.Element)
+		min := heap.Pop(candidatesHeap).(utils.Element)
 		if _, ok := deletedCandidates[uint32(min.Id)]; ok {
 			continue
 		}

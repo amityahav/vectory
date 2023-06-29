@@ -7,8 +7,8 @@ type Api interface {
 	// Insert a new vector and its corresponding data to the RW-Index
 	Insert(vector []float32, data any) error
 
-	// Delete Lazy deletion of vertex v
-	Delete(id uint32)
+	// Delete Lazy deletion of vertex v by its dataId
+	Delete(dataId uint32)
 
 	// Search for K-NN by querying Long-term index, RW-index and all RO-indexes, aggregating and filtering results
 	Search(vector []float32, k int, l int)
@@ -21,7 +21,7 @@ type DiskAnn struct {
 	roIndexes []*MemoryIndex
 	ltIndex   *DiskIndex
 
-	deletedIds *sync.Map
+	deletedDataIds *sync.Map
 
 	currId               uint32
 	memoryIndexSizeLimit int
@@ -29,13 +29,13 @@ type DiskAnn struct {
 
 func NewDiskAnn() *DiskAnn {
 	da := DiskAnn{
-		deletedIds:           &sync.Map{},
+		deletedDataIds:       &sync.Map{},
 		roIndexes:            nil,
 		currId:               0,
 		memoryIndexSizeLimit: 0,
 	}
 
-	da.rwIndex = newMemoryIndex(da.deletedIds)
+	da.rwIndex = newMemoryIndex(da.deletedDataIds)
 
 	return &da
 }
@@ -50,7 +50,7 @@ func (da *DiskAnn) Insert(vector []float32, data any) error {
 		da.rwIndex.ReadOnly()
 		go da.rwIndex.Snapshot()
 		da.roIndexes = append(da.roIndexes, da.rwIndex)
-		da.rwIndex = newMemoryIndex(da.deletedIds)
+		da.rwIndex = newMemoryIndex(da.deletedDataIds)
 	}
 	da.Unlock()
 
@@ -71,9 +71,14 @@ func (da *DiskAnn) Insert(vector []float32, data any) error {
 }
 
 func (da *DiskAnn) Delete(id uint32) bool {
-	da.deletedIds.Store(id, struct{}{})
+	da.deletedDataIds.Store(id, struct{}{})
 
 	// TODO: remove data from the datastore
 
 	return true
+}
+
+// Search all indexes with searchApi = true, maintain a MinMax heap to keep only K-NN from all indexes and return them
+func (da *DiskAnn) Search(vector []float32, k int, l int) {
+
 }

@@ -1,7 +1,7 @@
 package hnsw
 
 import (
-	"Vectory/indexes/hnsw/distance"
+	"Vectory/core/indexes/distance"
 	bufio2 "bufio"
 	"encoding/binary"
 	"io"

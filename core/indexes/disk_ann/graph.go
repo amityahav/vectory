@@ -25,6 +25,7 @@ func (g *Graph) addVertex(v *Vertex) {
 
 type Vertex struct {
 	Id        uint32
+	DataId    uint32
 	Neighbors []uint32
 	Vector    []float32
 }

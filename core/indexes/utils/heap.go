@@ -4,6 +4,7 @@ import "container/heap"
 
 type Element struct {
 	Id       int64
+	DataId   uint32
 	Distance float32
 }
 

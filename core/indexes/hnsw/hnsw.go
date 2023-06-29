@@ -1,7 +1,7 @@
 package hnsw
 
 import (
-	distance2 "Vectory/core/indexes/distance"
+	"Vectory/core/indexes/distance"
 	"Vectory/core/indexes/utils"
 	"container/heap"
 	"fmt"
@@ -66,10 +66,10 @@ func NewHnsw(config hnswConfig) *Hnsw {
 
 func (h *Hnsw) setDistanceFunction(distanceType string) {
 	switch distanceType {
-	case distance2.DotProduct:
-		h.distFunc = distance2.Dot
-	case distance2.Euclidean:
-		h.distFunc = distance2.EuclideanDistance
+	case distance.DotProduct:
+		h.distFunc = distance.Dot
+	case distance.Euclidean:
+		h.distFunc = distance.EuclideanDistance
 	}
 }
 
