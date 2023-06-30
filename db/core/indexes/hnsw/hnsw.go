@@ -34,7 +34,7 @@ type hnswConfig struct {
 	// Maximum number of connections for each element at layer zero
 	mMax0 int
 
-	// Size of the dynamic candidate list
+	// size of the dynamic candidate list
 	efConstruction int
 
 	// Normalization factor for level generation

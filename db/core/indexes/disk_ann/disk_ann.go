@@ -2,6 +2,7 @@ package disk_ann
 
 import (
 	"Vectory/db/core/indexes"
+	"Vectory/db/core/indexes/utils"
 	"sync"
 )
 
@@ -20,7 +21,7 @@ type DiskAnn struct {
 	distanceThreshold int
 
 	currId               uint32
-	memoryIndexSizeLimit int
+	memoryIndexSizeLimit uint32
 }
 
 func NewDiskAnn() *DiskAnn {
@@ -31,22 +32,22 @@ func NewDiskAnn() *DiskAnn {
 		memoryIndexSizeLimit: 0,
 	}
 
-	da.rwIndex = newMemoryIndex(da.deletedObjIds)
+	da.rwIndex = newMemoryIndex(da.deletedObjIds, 0)
 
 	return &da
 }
 
-// Load loads the index from disk and recovers in-memory indexes in case of a crash
+// Load loads the size from disk and recovers in-memory indexes in case of a crash
 func Load() {
 }
 
 func (da *DiskAnn) Insert(vector []float32, objId uint32) error {
 	da.Lock()
-	if da.rwIndex.graph.size() == da.memoryIndexSizeLimit {
+	if da.rwIndex.Size() == da.memoryIndexSizeLimit {
 		da.rwIndex.ReadOnly()
 		go da.rwIndex.Snapshot()
 		da.roIndexes = append(da.roIndexes, da.rwIndex)
-		da.rwIndex = newMemoryIndex(da.deletedObjIds)
+		da.rwIndex = newMemoryIndex(da.deletedObjIds, da.currId)
 	}
 	da.Unlock()
 
@@ -69,7 +70,23 @@ func (da *DiskAnn) Delete(objId uint32) bool {
 	return true
 }
 
-// Search all indexes with onlySearch = true, maintain a MinMax heap to keep only K-NN from all indexes and return them
-func (da *DiskAnn) Search(vector []float32, k int) {
+func (da *DiskAnn) Search(q []float32, k int) []utils.Element {
+	rwResults, _ := da.rwIndex.Search(q, k, da.listSize, true)
 
+	for _, roIndex := range da.roIndexes {
+		roResults, _ := roIndex.Search(q, k, da.listSize, true)
+		rwResults = append(rwResults, roResults...)
+	}
+
+	ltResults, _ := da.ltIndex.Search(q, k, da.listSize, true)
+
+	rwResults = append(rwResults, ltResults...)
+
+	results := utils.NewMinMaxHeapFromSlice(rwResults)
+
+	for results.Len() > k {
+		utils.PopMax(results)
+	}
+
+	return results.Elements
 }

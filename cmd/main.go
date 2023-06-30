@@ -32,12 +32,12 @@ func main() {
 //		}
 //
 //		v := hnsw.Vertex{
-//			Id:     int64(i),
-//			Vector: make([]float32, dim),
+//			id:     int64(i),
+//			vector: make([]float32, dim),
 //		}
 //
 //		for j := 0; j < int(dim); j++ {
-//			v.Vector[j], err = readFloat32(buf, b)
+//			v.vector[j], err = readFloat32(buf, b)
 //			if err != nil {
 //				log.Fatal(err)
 //			}
@@ -94,12 +94,12 @@ func main() {
 //				}
 //
 //				v := hnsw.Vertex{
-//					Id:     int64(chunkNum*chunkSize + j),
-//					Vector: make([]float32, dim),
+//					id:     int64(chunkNum*chunkSize + j),
+//					vector: make([]float32, dim),
 //				}
 //
 //				for l := 0; l < int(dim); l++ {
-//					v.Vector[l], err = readFloat32(buf, b)
+//					v.vector[l], err = readFloat32(buf, b)
 //					if err != nil {
 //						log.Fatal(err)
 //					}
@@ -116,7 +116,7 @@ func main() {
 //	}()
 //
 //	for v := range insertionChannel {
-//		log.Printf("Loaded V#%d", v.Id)
+//		log.Printf("Loaded V#%d", v.id)
 //	}
 //}
 //

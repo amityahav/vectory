@@ -3,7 +3,9 @@ package disk_ann
 import (
 	"Vectory/db/core/indexes/utils"
 	"container/heap"
+	"encoding/binary"
 	"sync"
+	"sync/atomic"
 )
 
 type MemoryIndex struct {
@@ -12,18 +14,31 @@ type MemoryIndex struct {
 	calculateDistance func([]float32, []float32) float32
 	deletedObjIds     *sync.Map
 
+	// index size
+	size uint32
+
 	// starting point
 	s uint32
+
+	// vectors dimension
+	dim uint32
+
+	// max vertex degree
+	maxDegree uint32
+
+	// the first vertex id that was inserted into the size
+	firstId uint32
 
 	readOnly     bool
 	snapshotPath string
 }
 
-func newMemoryIndex(deletedObjIds *sync.Map) *MemoryIndex {
+func newMemoryIndex(deletedObjIds *sync.Map, firstId uint32) *MemoryIndex {
 	mi := MemoryIndex{
 		graph:             nil,
 		calculateDistance: nil,
 		deletedObjIds:     deletedObjIds,
+		firstId:           firstId,
 		readOnly:          false,
 		snapshotPath:      "",
 	}
@@ -37,11 +52,11 @@ func (mi *MemoryIndex) Search(q []float32, k int, listSize int, onlySearch bool)
 	sVertex := mi.graph.vertices[mi.s]
 	e := utils.Element{
 		Id:       int64(mi.s),
-		Distance: mi.calculateDistance(sVertex.Vector, q),
+		Distance: mi.calculateDistance(sVertex.vector, q),
 	}
 
 	if onlySearch {
-		e.DataId = sVertex.DataId
+		e.DataId = sVertex.objId
 	}
 
 	resultSet := utils.NewMinMaxHeapFromSlice([]utils.Element{e})
@@ -61,20 +76,20 @@ func (mi *MemoryIndex) Search(q []float32, k int, listSize int, onlySearch bool)
 		minVertex := mi.graph.vertices[uint32(min.Id)]
 
 		// filter deleted vertices from the result
-		if _, ok := mi.deletedObjIds.Load(minVertex.DataId); !ok {
+		if _, ok := mi.deletedObjIds.Load(minVertex.objId); !ok {
 			candidatesVisited = append(candidatesVisited, min)
 		}
 
-		for _, n := range minVertex.Neighbors {
+		for _, n := range minVertex.neighbors {
 			nVertex := mi.graph.vertices[n]
 
 			e = utils.Element{
 				Id:       int64(n),
-				Distance: mi.calculateDistance(nVertex.Vector, q),
+				Distance: mi.calculateDistance(nVertex.vector, q),
 			}
 
 			if onlySearch {
-				e.DataId = nVertex.DataId
+				e.DataId = nVertex.objId
 			}
 
 			utils.Push(resultSet, e)
@@ -108,35 +123,37 @@ func (mi *MemoryIndex) Insert(v []float32, listSize int, distanceThreshold int, 
 		return ErrReadOnlyIndex
 	}
 	vertex := Vertex{
-		Id:     currId,
-		DataId: dataId,
-		Vector: v,
+		id:     currId,
+		objId:  dataId,
+		vector: v,
 	}
 
 	mi.graph.addVertex(&vertex)
 
 	_, visited := mi.Search(v, 1, listSize, false)
 
-	vertex.Neighbors = mi.RobustPrune(&vertex, visited, distanceThreshold)
+	vertex.neighbors = mi.RobustPrune(&vertex, visited, distanceThreshold)
 
-	for _, n := range vertex.Neighbors {
+	for _, n := range vertex.neighbors {
 		neighbor := mi.graph.vertices[n]
 
-		neighbor.Neighbors = append(neighbor.Neighbors, vertex.Id)
+		neighbor.neighbors = append(neighbor.neighbors, vertex.id)
 
-		if len(neighbor.Neighbors) > mi.graph.maxDegree {
-			distances := make([]utils.Element, 0, len(neighbor.Neighbors))
+		if len(neighbor.neighbors) > int(mi.maxDegree) {
+			distances := make([]utils.Element, 0, len(neighbor.neighbors))
 
-			for _, nn := range neighbor.Neighbors {
+			for _, nn := range neighbor.neighbors {
 				nnVertex := mi.graph.vertices[nn]
 				distances = append(distances, utils.Element{
 					Id:       int64(nn),
-					Distance: mi.calculateDistance(nnVertex.Vector, neighbor.Vector),
+					Distance: mi.calculateDistance(nnVertex.vector, neighbor.vector),
 				})
 			}
-			neighbor.Neighbors = mi.RobustPrune(neighbor, distances, distanceThreshold)
+			neighbor.neighbors = mi.RobustPrune(neighbor, distances, distanceThreshold)
 		}
 	}
+
+	atomic.AddUint32(&mi.size, 1)
 
 	return nil
 }
@@ -148,13 +165,13 @@ func (mi *MemoryIndex) Delete(id uint32) error {
 
 func (mi *MemoryIndex) RobustPrune(v *Vertex, candidates []utils.Element, distanceThreshold int) []uint32 {
 	// TODO locking
-	deletedCandidates := map[uint32]struct{}{v.Id: {}} // excluding vertex v
+	deletedCandidates := map[uint32]struct{}{v.id: {}} // excluding vertex v
 
-	for _, n := range v.Neighbors {
+	for _, n := range v.neighbors {
 		nVertex := mi.graph.vertices[n]
 		e := utils.Element{
 			Id:       int64(n),
-			Distance: mi.calculateDistance(v.Vector, nVertex.Vector),
+			Distance: mi.calculateDistance(v.vector, nVertex.vector),
 		}
 
 		candidates = append(candidates, e)
@@ -171,7 +188,7 @@ func (mi *MemoryIndex) RobustPrune(v *Vertex, candidates []utils.Element, distan
 
 		newNeighbors = append(newNeighbors, uint32(min.Id))
 
-		if len(v.Neighbors) == mi.graph.maxDegree {
+		if len(v.neighbors) == int(mi.maxDegree) {
 			break
 		}
 
@@ -179,8 +196,8 @@ func (mi *MemoryIndex) RobustPrune(v *Vertex, candidates []utils.Element, distan
 			minVertex := mi.graph.vertices[uint32(min.Id)]
 			cVertex := mi.graph.vertices[uint32(c.Id)]
 
-			if float32(distanceThreshold)*mi.calculateDistance(minVertex.Vector, cVertex.Vector) <= c.Distance {
-				deletedCandidates[cVertex.Id] = struct{}{}
+			if float32(distanceThreshold)*mi.calculateDistance(minVertex.vector, cVertex.vector) <= c.Distance {
+				deletedCandidates[cVertex.id] = struct{}{}
 			}
 		}
 	}
@@ -188,7 +205,46 @@ func (mi *MemoryIndex) RobustPrune(v *Vertex, candidates []utils.Element, distan
 	return newNeighbors
 }
 
+func (mi *MemoryIndex) Size() uint32 {
+	return mi.size
+}
+
 func (mi *MemoryIndex) Snapshot() {
+
+}
+
+func (mi *MemoryIndex) serializeMetadata(buff []byte) int {
+	var offset int
+
+	binary.LittleEndian.PutUint32(buff[offset:], mi.dim)
+	offset += 4
+
+	binary.LittleEndian.PutUint32(buff[offset:], mi.maxDegree)
+	offset += 4
+
+	binary.LittleEndian.PutUint32(buff[offset:], mi.firstId)
+	offset += 4
+
+	binary.LittleEndian.PutUint32(buff[offset:], mi.size)
+	offset += 4
+
+	return offset
+}
+
+func (mi *MemoryIndex) deserializeMetadata(buff []byte) {
+	var offset int
+
+	mi.dim = binary.LittleEndian.Uint32(buff[offset:])
+	offset += 4
+
+	mi.maxDegree = binary.LittleEndian.Uint32(buff[offset:])
+	offset += 4
+
+	mi.firstId = binary.LittleEndian.Uint32(buff[offset:])
+	offset += 4
+
+	mi.size = binary.LittleEndian.Uint32(buff[offset:])
+	offset += 4
 
 }
 
