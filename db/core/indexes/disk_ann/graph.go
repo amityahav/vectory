@@ -6,15 +6,12 @@ import (
 )
 
 type Graph struct {
-	maxDegree uint32
-
 	vertices map[uint32]*Vertex
 }
 
-func newGraph(maxDegree uint32) *Graph {
+func newGraph() *Graph {
 	g := Graph{
-		maxDegree: maxDegree, // TODO
-		vertices:  map[uint32]*Vertex{},
+		vertices: map[uint32]*Vertex{},
 	}
 
 	return &g
@@ -24,26 +21,31 @@ func (g *Graph) addVertex(v *Vertex) {
 	g.vertices[v.id] = v
 }
 
-func (g *Graph) serializeVertices(buff []byte, ids []uint32) int {
+func (g *Graph) serializeVertices(buff []byte, ids []uint32, maxDegree uint32) int {
 	var offset int
 
 	for _, id := range ids {
 		v := g.vertices[id]
-		n := v.serialize(buff[offset:], g.maxDegree)
+		n := v.serialize(buff[offset:], maxDegree)
 		offset += n
 	}
 
 	return offset
 }
 
-func (g *Graph) deserializeVertices(buff []byte, firstId uint32, numberOfVertices int) {
+func (g *Graph) deserializeVertices(buff []byte, dim uint32, maxDegree uint32, numberOfVertices uint32, currId uint32) int {
 	var offset int
 
-	for i := 0; i < numberOfVertices; i++ {
+	for i := 0; i < int(numberOfVertices); i++ {
 		v := Vertex{}
-		v.deserialize(buff[offset:])
+		v.id = currId + uint32(i)
+		n := v.deserialize(buff[offset:], dim, maxDegree)
+		g.vertices[v.id] = &v
 
+		offset += n
 	}
+
+	return offset
 }
 
 type Vertex struct {
@@ -79,8 +81,7 @@ func (v *Vertex) serialize(buff []byte, maxDegree uint32) int {
 	return offset
 }
 
-func (v *Vertex) deserialize(buff []byte, dim uint32) {
-	// TODO: calculate v id based on position on disk
+func (v *Vertex) deserialize(buff []byte, dim uint32, maxDegree uint32) int {
 	var offset int
 
 	v.objId = binary.LittleEndian.Uint32(buff[offset:])
@@ -95,6 +96,20 @@ func (v *Vertex) deserialize(buff []byte, dim uint32) {
 		v.vector = append(v.vector, math.Float32frombits(floatAsUint32))
 	}
 
-	// TODO: extract floats until the first 0
+	// TODO: can be optimized for allocations if we store v's degree on disk and then allocate its neighbors size accordingly
+	var remainder int
 
+	for i := 0; i < int(maxDegree); i++ {
+		n := binary.LittleEndian.Uint32(buff[offset:])
+		offset += 4
+
+		if n == 0 { // no more neighbors
+			remainder = int(maxDegree) - i - 1 // paddings
+			break
+		}
+
+		v.neighbors = append(v.neighbors, n)
+	}
+
+	return offset + remainder*4 // TODO: check this
 }

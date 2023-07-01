@@ -13,6 +13,7 @@ type MemoryIndex struct {
 	graph             *Graph
 	calculateDistance func([]float32, []float32) float32
 	deletedObjIds     *sync.Map
+	initialInsertion  *sync.Once
 
 	// index size
 	size uint32
@@ -33,14 +34,17 @@ type MemoryIndex struct {
 	snapshotPath string
 }
 
-func newMemoryIndex(deletedObjIds *sync.Map, firstId uint32) *MemoryIndex {
+func newMemoryIndex(distFunc func([]float32, []float32) float32,
+	deletedObjIds *sync.Map, firstId uint32, maxDegree uint32, dim uint32) *MemoryIndex {
 	mi := MemoryIndex{
-		graph:             nil,
-		calculateDistance: nil,
+		graph:             newGraph(),
+		calculateDistance: distFunc,
 		deletedObjIds:     deletedObjIds,
+		initialInsertion:  &sync.Once{},
 		firstId:           firstId,
+		maxDegree:         maxDegree,
+		dim:               dim,
 		readOnly:          false,
-		snapshotPath:      "",
 	}
 
 	return &mi
@@ -75,7 +79,7 @@ func (mi *MemoryIndex) Search(q []float32, k int, listSize int, onlySearch bool)
 
 		minVertex := mi.graph.vertices[uint32(min.Id)]
 
-		// filter deleted vertices from the result
+		// add non-deleted vertices to the result
 		if _, ok := mi.deletedObjIds.Load(minVertex.objId); !ok {
 			candidatesVisited = append(candidatesVisited, min)
 		}
@@ -115,13 +119,18 @@ func (mi *MemoryIndex) Search(q []float32, k int, listSize int, onlySearch bool)
 	return nil, candidatesVisited
 }
 
-func (mi *MemoryIndex) Insert(v []float32, listSize int, distanceThreshold int, currId, dataId uint32) error {
+func (mi *MemoryIndex) Insert(v []float32, listSize int, distanceThreshold float32, currId, dataId uint32) error {
 	mi.Lock() // TODO: optimize locking
 	defer mi.Unlock()
 
 	if mi.readOnly {
 		return ErrReadOnlyIndex
 	}
+
+	if len(v) != int(mi.dim) {
+		return ErrVectorDimensions
+	}
+
 	vertex := Vertex{
 		id:     currId,
 		objId:  dataId,
@@ -129,6 +138,22 @@ func (mi *MemoryIndex) Insert(v []float32, listSize int, distanceThreshold int, 
 	}
 
 	mi.graph.addVertex(&vertex)
+
+	var first bool
+	mi.initialInsertion.Do(func() {
+		if mi.s == 0 {
+			mi.s = vertex.id
+		}
+
+		if mi.Size() == 0 { // first insertion
+			mi.size++
+			first = true
+		}
+	})
+
+	if first {
+		return nil
+	}
 
 	_, visited := mi.Search(v, 1, listSize, false)
 
@@ -163,7 +188,7 @@ func (mi *MemoryIndex) Delete(id uint32) error {
 	return nil
 }
 
-func (mi *MemoryIndex) RobustPrune(v *Vertex, candidates []utils.Element, distanceThreshold int) []uint32 {
+func (mi *MemoryIndex) RobustPrune(v *Vertex, candidates []utils.Element, distanceThreshold float32) []uint32 {
 	// TODO locking
 	deletedCandidates := map[uint32]struct{}{v.id: {}} // excluding vertex v
 
@@ -178,7 +203,7 @@ func (mi *MemoryIndex) RobustPrune(v *Vertex, candidates []utils.Element, distan
 	}
 
 	candidatesHeap := utils.NewMinHeapFromSlice(candidates)
-	newNeighbors := make([]uint32, 0, mi.graph.maxDegree)
+	newNeighbors := make([]uint32, 0, mi.maxDegree)
 
 	for candidatesHeap.Len() != 0 {
 		min := heap.Pop(candidatesHeap).(utils.Element)
@@ -196,7 +221,7 @@ func (mi *MemoryIndex) RobustPrune(v *Vertex, candidates []utils.Element, distan
 			minVertex := mi.graph.vertices[uint32(min.Id)]
 			cVertex := mi.graph.vertices[uint32(c.Id)]
 
-			if float32(distanceThreshold)*mi.calculateDistance(minVertex.vector, cVertex.vector) <= c.Distance {
+			if distanceThreshold*mi.calculateDistance(minVertex.vector, cVertex.vector) <= c.Distance {
 				deletedCandidates[cVertex.id] = struct{}{}
 			}
 		}
@@ -209,8 +234,18 @@ func (mi *MemoryIndex) Size() uint32 {
 	return mi.size
 }
 
-func (mi *MemoryIndex) Snapshot() {
+func (mi *MemoryIndex) Snapshot(path string) error {
+	d, err := newDal(path)
+	if err != nil {
+		return err
+	}
 
+	err = d.writeIndex(mi)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (mi *MemoryIndex) serializeMetadata(buff []byte) int {
@@ -228,10 +263,13 @@ func (mi *MemoryIndex) serializeMetadata(buff []byte) int {
 	binary.LittleEndian.PutUint32(buff[offset:], mi.size)
 	offset += 4
 
+	binary.LittleEndian.PutUint32(buff[offset:], mi.s)
+	offset += 4
+
 	return offset
 }
 
-func (mi *MemoryIndex) deserializeMetadata(buff []byte) {
+func (mi *MemoryIndex) deserializeMetadata(buff []byte) int {
 	var offset int
 
 	mi.dim = binary.LittleEndian.Uint32(buff[offset:])
@@ -246,6 +284,10 @@ func (mi *MemoryIndex) deserializeMetadata(buff []byte) {
 	mi.size = binary.LittleEndian.Uint32(buff[offset:])
 	offset += 4
 
+	mi.s = binary.LittleEndian.Uint32(buff[offset:])
+	offset += 4
+
+	return offset
 }
 
 func (mi *MemoryIndex) ReadOnly() {

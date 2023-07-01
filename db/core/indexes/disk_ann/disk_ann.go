@@ -3,6 +3,7 @@ package disk_ann
 import (
 	"Vectory/db/core/indexes"
 	"Vectory/db/core/indexes/utils"
+	"fmt"
 	"sync"
 )
 
@@ -17,10 +18,14 @@ type DiskAnn struct {
 
 	deletedObjIds *sync.Map
 
+	distanceFunction func([]float32, []float32) float32
+
 	listSize          int
-	distanceThreshold int
+	distanceThreshold float32
 
 	currId               uint32
+	maxDegree            uint32
+	dim                  uint32
 	memoryIndexSizeLimit uint32
 }
 
@@ -28,11 +33,11 @@ func NewDiskAnn() *DiskAnn {
 	da := DiskAnn{
 		deletedObjIds:        &sync.Map{},
 		roIndexes:            nil,
-		currId:               0,
+		currId:               1, // vertices start from id 1
 		memoryIndexSizeLimit: 0,
 	}
 
-	da.rwIndex = newMemoryIndex(da.deletedObjIds, 0)
+	da.rwIndex = newMemoryIndex(da.distanceFunction, da.deletedObjIds, da.currId, da.maxDegree, da.dim)
 
 	return &da
 }
@@ -45,9 +50,16 @@ func (da *DiskAnn) Insert(vector []float32, objId uint32) error {
 	da.Lock()
 	if da.rwIndex.Size() == da.memoryIndexSizeLimit {
 		da.rwIndex.ReadOnly()
-		go da.rwIndex.Snapshot()
+
+		go func() {
+			err := da.rwIndex.Snapshot(fmt.Sprintf("./ro_%d.vctry", len(da.roIndexes)))
+			if err != nil {
+				// TODO: retry?
+			}
+		}()
+
 		da.roIndexes = append(da.roIndexes, da.rwIndex)
-		da.rwIndex = newMemoryIndex(da.deletedObjIds, da.currId)
+		da.rwIndex = newMemoryIndex(da.distanceFunction, da.deletedObjIds, da.currId, da.maxDegree, da.dim)
 	}
 	da.Unlock()
 

@@ -29,7 +29,7 @@ func newDal(path string) (*dal, error) {
 
 	d := dal{
 		file:     file,
-		nextPage: 1,
+		nextPage: 1, // 0 is reserved for metadata
 	}
 
 	return &d, nil
@@ -78,10 +78,10 @@ func (d *dal) getNextPage() int {
 
 /*
 Index disk layout:
-- Each page is of pageSize size
-- First page contains size's metadata: vectors dimensions, graph's size, graph's max degree, firstId
-- All other pages contain vertices, each vertex contains: objId, vector, neighbors
-- The number of vertices in each page is calculated by: floor(pageSize / (4 * (1 + dim + degree)))
+- Each page is of pageSize size.
+- First page contains size's metadata: vectors dimensions, graph's size, graph's max degree, firstId, index size, s id.
+- All other pages contain vertices, each vertex contains: objId, vector, neighbors.
+- The number of vertices in each page is calculated by: floor(pageSize / (4 * (1 + dim + degree))).
  ------------------------------------------------
 | metadata	| vertices	| vertices	| vertices	|
 |			|			|			|			|
@@ -119,7 +119,7 @@ func (d *dal) writeIndex(mi *MemoryIndex) error {
 		p := d.newMemoryEmptyPage()
 		p.pageNum = d.getNextPage()
 
-		mi.graph.serializeVertices(p.data, sortedIds[offset:offset+int(numOfVerticesInPage)])
+		mi.graph.serializeVertices(p.data, sortedIds[offset:offset+int(numOfVerticesInPage)], mi.maxDegree)
 
 		err = d.writePage(p)
 		if err != nil {
@@ -133,7 +133,7 @@ func (d *dal) writeIndex(mi *MemoryIndex) error {
 		p := d.newMemoryEmptyPage()
 		p.pageNum = d.getNextPage()
 
-		mi.graph.serializeVertices(p.data, sortedIds[offset:offset+remainder])
+		mi.graph.serializeVertices(p.data, sortedIds[offset:offset+remainder], mi.maxDegree)
 
 		err = d.writePage(p)
 		if err != nil {
@@ -145,7 +145,7 @@ func (d *dal) writeIndex(mi *MemoryIndex) error {
 }
 
 func (d *dal) readIndex() (*MemoryIndex, error) {
-	mi := MemoryIndex{}
+	mi := MemoryIndex{graph: newGraph()}
 
 	// reading metadata page
 	p, err := d.readPage(metadataPageNum)
@@ -155,19 +155,31 @@ func (d *dal) readIndex() (*MemoryIndex, error) {
 
 	mi.deserializeMetadata(p.data)
 
-	mi.graph = newGraph(mi.maxDegree)
-
 	// reading vertices pages
-	numOfVerticesInPage := math.Floor(float64(pageSize / (4 * (1 + mi.dim + mi.maxDegree))))
-	numOfFullPages := mi.Size() / uint32(numOfVerticesInPage)
-	remainder := mi.Size() % uint32(numOfVerticesInPage)
+	numOfVerticesInPage := uint32(math.Floor(float64(pageSize / (4 * (1 + mi.dim + mi.maxDegree)))))
+	numOfFullPages := mi.Size() / numOfVerticesInPage
+	remainder := mi.Size() % numOfVerticesInPage
 
+	currId := mi.firstId
 	for i := 1; i <= int(numOfFullPages); i++ {
 		p, err = d.readPage(i)
 		if err != nil {
 			return nil, err
 		}
 
+		mi.graph.deserializeVertices(p.data, mi.dim, mi.maxDegree, numOfVerticesInPage, currId)
+		currId += numOfVerticesInPage
 	}
 
+	if remainder != 0 {
+		p, err = d.readPage(int(numOfFullPages) + 1)
+		if err != nil {
+			return nil, err
+		}
+
+		mi.graph.deserializeVertices(p.data, mi.dim, mi.maxDegree, remainder, currId)
+		currId += remainder
+	}
+
+	return &mi, nil
 }
