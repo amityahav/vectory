@@ -42,7 +42,7 @@ func NewDiskAnn() *DiskAnn {
 	return &da
 }
 
-// Load loads the size from disk and recovers in-memory indexes in case of a crash
+// Load loads the index from disk and recovers in-memory indexes in case of a crash
 func Load() {
 }
 

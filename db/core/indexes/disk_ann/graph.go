@@ -104,12 +104,12 @@ func (v *Vertex) deserialize(buff []byte, dim uint32, maxDegree uint32) int {
 		offset += 4
 
 		if n == 0 { // no more neighbors
-			remainder = int(maxDegree) - i - 1 // paddings
+			remainder = int(maxDegree) - i - 1 // paddings remainder
 			break
 		}
 
 		v.neighbors = append(v.neighbors, n)
 	}
 
-	return offset + remainder*4 // TODO: check this
+	return offset + remainder*4
 }

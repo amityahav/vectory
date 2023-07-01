@@ -245,6 +245,8 @@ func (mi *MemoryIndex) Snapshot(path string) error {
 		return err
 	}
 
+	mi.snapshotPath = path
+
 	return nil
 }
 
