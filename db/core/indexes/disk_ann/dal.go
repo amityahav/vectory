@@ -35,6 +35,10 @@ func newDal(path string) (*dal, error) {
 	return &d, nil
 }
 
+func (d *dal) close() error {
+	return d.file.Close()
+}
+
 func (d *dal) newMemoryEmptyPage() *page {
 	p := page{
 		data: make([]byte, pageSize),
@@ -157,8 +161,8 @@ func (d *dal) readIndex() (*MemoryIndex, error) {
 
 	// reading vertices pages
 	numOfVerticesInPage := uint32(math.Floor(float64(pageSize / (4 * (1 + mi.dim + mi.maxDegree)))))
-	numOfFullPages := mi.Size() / numOfVerticesInPage
-	remainder := mi.Size() % numOfVerticesInPage
+	numOfFullPages := mi.size / numOfVerticesInPage
+	remainder := mi.size % numOfVerticesInPage
 
 	currId := mi.firstId
 	for i := 1; i <= int(numOfFullPages); i++ {

@@ -5,7 +5,6 @@ import (
 	"container/heap"
 	"encoding/binary"
 	"sync"
-	"sync/atomic"
 )
 
 type MemoryIndex struct {
@@ -14,9 +13,6 @@ type MemoryIndex struct {
 	calculateDistance func([]float32, []float32) float32
 	deletedObjIds     *sync.Map
 	initialInsertion  *sync.Once
-
-	// index size
-	size uint32
 
 	// starting point
 	s uint32
@@ -31,6 +27,7 @@ type MemoryIndex struct {
 	firstId uint32
 
 	readOnly     bool
+	size         uint32 // immutable size once the index is snapshot
 	snapshotPath string
 }
 
@@ -51,7 +48,7 @@ func newMemoryIndex(distFunc func([]float32, []float32) float32,
 }
 
 // TODO: beam search support as well
-func (mi *MemoryIndex) Search(q []float32, k int, listSize int, onlySearch bool) ([]utils.Element, []utils.Element) {
+func (mi *MemoryIndex) search(q []float32, k int, listSize int, onlySearch bool) ([]utils.Element, []utils.Element) {
 	// TODO: locking
 	sVertex := mi.graph.vertices[mi.s]
 	e := utils.Element{
@@ -119,7 +116,7 @@ func (mi *MemoryIndex) Search(q []float32, k int, listSize int, onlySearch bool)
 	return nil, candidatesVisited
 }
 
-func (mi *MemoryIndex) Insert(v []float32, listSize int, distanceThreshold float32, currId, dataId uint32) error {
+func (mi *MemoryIndex) insert(v []float32, listSize int, distanceThreshold float32, currId, dataId uint32) error {
 	mi.Lock() // TODO: optimize locking
 	defer mi.Unlock()
 
@@ -137,8 +134,6 @@ func (mi *MemoryIndex) Insert(v []float32, listSize int, distanceThreshold float
 		vector: v,
 	}
 
-	mi.graph.addVertex(&vertex)
-
 	var first bool
 	mi.initialInsertion.Do(func() {
 		if mi.s == 0 {
@@ -146,7 +141,7 @@ func (mi *MemoryIndex) Insert(v []float32, listSize int, distanceThreshold float
 		}
 
 		if mi.Size() == 0 { // first insertion
-			mi.size++
+			mi.graph.addVertex(&vertex)
 			first = true
 		}
 	})
@@ -155,9 +150,11 @@ func (mi *MemoryIndex) Insert(v []float32, listSize int, distanceThreshold float
 		return nil
 	}
 
-	_, visited := mi.Search(v, 1, listSize, false)
+	mi.graph.addVertex(&vertex)
 
-	vertex.neighbors = mi.RobustPrune(&vertex, visited, distanceThreshold)
+	_, visited := mi.search(v, 1, listSize, false)
+
+	vertex.neighbors = mi.robustPrune(&vertex, visited, distanceThreshold)
 
 	for _, n := range vertex.neighbors {
 		neighbor := mi.graph.vertices[n]
@@ -165,7 +162,7 @@ func (mi *MemoryIndex) Insert(v []float32, listSize int, distanceThreshold float
 		neighbor.neighbors = append(neighbor.neighbors, vertex.id)
 
 		if len(neighbor.neighbors) > int(mi.maxDegree) {
-			distances := make([]utils.Element, 0, len(neighbor.neighbors))
+			distances := make([]utils.Element, 0, mi.maxDegree)
 
 			for _, nn := range neighbor.neighbors {
 				nnVertex := mi.graph.vertices[nn]
@@ -174,21 +171,19 @@ func (mi *MemoryIndex) Insert(v []float32, listSize int, distanceThreshold float
 					Distance: mi.calculateDistance(nnVertex.vector, neighbor.vector),
 				})
 			}
-			neighbor.neighbors = mi.RobustPrune(neighbor, distances, distanceThreshold)
+			neighbor.neighbors = mi.robustPrune(neighbor, distances, distanceThreshold)
 		}
 	}
-
-	atomic.AddUint32(&mi.size, 1)
 
 	return nil
 }
 
-func (mi *MemoryIndex) Delete(id uint32) error {
+func (mi *MemoryIndex) delete(id uint32) error {
 	// TODO: delete consolidation?
 	return nil
 }
 
-func (mi *MemoryIndex) RobustPrune(v *Vertex, candidates []utils.Element, distanceThreshold float32) []uint32 {
+func (mi *MemoryIndex) robustPrune(v *Vertex, candidates []utils.Element, distanceThreshold float32) []uint32 {
 	// TODO locking
 	deletedCandidates := map[uint32]struct{}{v.id: {}} // excluding vertex v
 
@@ -229,12 +224,15 @@ func (mi *MemoryIndex) RobustPrune(v *Vertex, candidates []utils.Element, distan
 
 	return newNeighbors
 }
-
-func (mi *MemoryIndex) Size() uint32 {
-	return mi.size
+func (mi *MemoryIndex) ReadOnly() {
+	mi.readOnly = true
 }
 
-func (mi *MemoryIndex) Snapshot(path string) error {
+func (mi *MemoryIndex) Size() uint32 {
+	return uint32(len(mi.graph.vertices))
+}
+
+func (mi *MemoryIndex) snapshot(path string) error {
 	d, err := newDal(path)
 	if err != nil {
 		return err
@@ -247,7 +245,7 @@ func (mi *MemoryIndex) Snapshot(path string) error {
 
 	mi.snapshotPath = path
 
-	return nil
+	return d.close()
 }
 
 func (mi *MemoryIndex) serializeMetadata(buff []byte) int {
@@ -262,7 +260,7 @@ func (mi *MemoryIndex) serializeMetadata(buff []byte) int {
 	binary.LittleEndian.PutUint32(buff[offset:], mi.firstId)
 	offset += 4
 
-	binary.LittleEndian.PutUint32(buff[offset:], mi.size)
+	binary.LittleEndian.PutUint32(buff[offset:], mi.Size())
 	offset += 4
 
 	binary.LittleEndian.PutUint32(buff[offset:], mi.s)
@@ -292,6 +290,21 @@ func (mi *MemoryIndex) deserializeMetadata(buff []byte) int {
 	return offset
 }
 
-func (mi *MemoryIndex) ReadOnly() {
-	mi.readOnly = true
+func loadMemoryIndex(path string) (*MemoryIndex, error) {
+	d, err := newDal(path)
+	if err != nil {
+		return nil, err
+	}
+
+	mi, err := d.readIndex()
+	if err != nil {
+		return nil, err
+	}
+
+	err = d.close()
+	if err != nil {
+		return nil, err
+	}
+
+	return mi, nil
 }

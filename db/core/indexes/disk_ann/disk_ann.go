@@ -43,7 +43,7 @@ func NewDiskAnn() *DiskAnn {
 }
 
 // Load loads the index from disk and recovers in-memory indexes in case of a crash
-func Load() {
+func loadIndex(path string) {
 }
 
 func (da *DiskAnn) Insert(vector []float32, objId uint32) error {
@@ -52,7 +52,7 @@ func (da *DiskAnn) Insert(vector []float32, objId uint32) error {
 		da.rwIndex.ReadOnly()
 
 		go func() {
-			err := da.rwIndex.Snapshot(fmt.Sprintf("./ro_%d.vctry", len(da.roIndexes)))
+			err := da.rwIndex.snapshot(fmt.Sprintf("./ro_%d.vctry", len(da.roIndexes)))
 			if err != nil {
 				// TODO: retry?
 			}
@@ -68,7 +68,7 @@ func (da *DiskAnn) Insert(vector []float32, objId uint32) error {
 	da.currId += 1
 	da.Unlock()
 
-	err := da.rwIndex.Insert(vector, da.listSize, da.distanceThreshold, currId, objId)
+	err := da.rwIndex.insert(vector, da.listSize, da.distanceThreshold, currId, objId)
 	if err != nil {
 		return err
 	}
@@ -83,14 +83,14 @@ func (da *DiskAnn) Delete(objId uint32) bool {
 }
 
 func (da *DiskAnn) Search(q []float32, k int) []utils.Element {
-	rwResults, _ := da.rwIndex.Search(q, k, da.listSize, true)
+	rwResults, _ := da.rwIndex.search(q, k, da.listSize, true)
 
 	for _, roIndex := range da.roIndexes {
-		roResults, _ := roIndex.Search(q, k, da.listSize, true)
+		roResults, _ := roIndex.search(q, k, da.listSize, true)
 		rwResults = append(rwResults, roResults...)
 	}
 
-	ltResults, _ := da.ltIndex.Search(q, k, da.listSize, true)
+	ltResults, _ := da.ltIndex.search(q, k, da.listSize, true)
 
 	rwResults = append(rwResults, ltResults...)
 
