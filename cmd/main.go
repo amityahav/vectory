@@ -1,7 +1,46 @@
 package main
 
-func main() {
+import (
+	"Vectory/db"
+	"context"
+	"flag"
+	"gopkg.in/yaml.v3"
+	"io/ioutil"
+	"log"
+)
 
+func main() {
+	var cfgPath string
+
+	flag.StringVar(&cfgPath, "config", "", "config path for Vectory")
+	flag.Parse()
+
+	cfg, err := readConfig(cfgPath)
+	if err != nil {
+		log.Fatalf("startup: %v", err)
+	}
+
+	vectory, err := db.NewDB(cfg)
+	err = vectory.CreateCollection(context.TODO(), nil)
+	if err != nil {
+		log.Fatalf("startup: %v", err)
+	}
+}
+
+func readConfig(path string) (*db.Config, error) {
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var cfg db.Config
+
+	err = yaml.Unmarshal(b, &cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
 }
 
 //

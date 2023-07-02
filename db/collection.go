@@ -15,7 +15,7 @@ type collectionConfig struct {
 type Collection struct {
 	id       any
 	name     string
-	objStore any
+	objStore any //obj_store.db
 	index    indexes.VectorIndex
 	logger   any
 	embedder any

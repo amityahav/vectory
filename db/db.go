@@ -1,20 +1,56 @@
 package db
 
-import "sync"
+import (
+	"Vectory/db/metadata"
+	"context"
+	"github.com/sirupsen/logrus"
+	"os"
+	"sync"
+)
+
+type Config struct {
+	FilesPath string `yaml:"files_path"`
+}
 
 type DB struct {
 	sync.RWMutex
-	collections *sync.Map
-	logger      any
-	config      any
-	wal         any
+	config          *Config
+	metadataManager *metadata.MetaManager
+	collections     *sync.Map
+	logger          *logrus.Logger
+	wal             any
 }
 
-func NewDB(path string) (*DB, error) {
-	return &DB{}, nil
+func NewDB(cfg *Config) (*DB, error) {
+	db := DB{
+		config:      cfg,
+		collections: nil,
+		logger:      logrus.New(),
+		wal:         nil,
+	}
+
+	db.logger.SetFormatter(&logrus.JSONFormatter{})
+
+	if stat, err := os.Stat(cfg.FilesPath); err != nil || !stat.IsDir() {
+		return nil, ErrPathNotDirectory
+	}
+
+	mm, err := metadata.NewMetaManager(db.config.FilesPath)
+	if err != nil {
+		return nil, err
+	}
+
+	db.metadataManager = mm
+
+	return &db, nil
 }
 
-func (db *DB) CreateCollection(cfg *collectionConfig) error {
+func (db *DB) CreateCollection(ctx context.Context, cfg *collectionConfig) error {
+	err := db.metadataManager.CreateCollection(ctx)
+	if err != nil {
+		return err
+	}
+
 	// TODO: persist
 	if _, ok := db.collections.Load(cfg.Name); ok {
 		return ErrCollectionAlreadyExists
@@ -30,7 +66,7 @@ func (db *DB) CreateCollection(cfg *collectionConfig) error {
 	return nil
 }
 
-func (db *DB) DeleteCollection(name string) error {
+func (db *DB) DeleteCollection(ctx context.Context, name string) error {
 	// TODO: persist
 	c, ok := db.collections.Load(name)
 
