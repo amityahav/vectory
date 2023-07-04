@@ -5,6 +5,7 @@ import (
 	"Vectory/db/core/indexes/utils"
 	"fmt"
 	"sync"
+	"sync/atomic"
 )
 
 var _ indexes.VectorIndex = &DiskAnn{}
@@ -63,10 +64,8 @@ func (da *DiskAnn) Insert(vector []float32, objId uint32) error {
 	}
 	da.Unlock()
 
-	da.Lock()
-	currId := da.currId
-	da.currId += 1
-	da.Unlock()
+	nextId := atomic.AddUint32(&da.currId, 1)
+	currId := nextId - 1 // after atomically incrementing we are guaranteed to have unique incrementing ids
 
 	err := da.rwIndex.insert(vector, da.listSize, da.distanceThreshold, currId, objId)
 	if err != nil {

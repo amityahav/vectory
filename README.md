@@ -1,5 +1,5 @@
 # Vectory
-![](docs/logo.png)
+![](docs/logo.png )
 
 This project is under active development.
 
