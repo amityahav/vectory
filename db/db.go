@@ -9,7 +9,8 @@ import (
 )
 
 type Config struct {
-	FilesPath string `yaml:"files_path"`
+	FilesPath  string `yaml:"files_path"`
+	ListenPort int    `yaml:"listen_port"`
 }
 
 type DB struct {

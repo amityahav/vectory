@@ -49,7 +49,7 @@ func loadIndex(path string) {
 
 func (da *DiskAnn) Insert(vector []float32, objId uint32) error {
 	da.Lock()
-	if da.rwIndex.Size() == da.memoryIndexSizeLimit {
+	if da.rwIndex.Size() == da.memoryIndexSizeLimit { // TODO: find a better way for this
 		da.rwIndex.ReadOnly()
 
 		go func() {

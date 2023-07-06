@@ -1,12 +1,16 @@
 package main
 
 import (
+	"Vectory/api/handlers"
 	"Vectory/db"
-	"context"
+	"Vectory/gen/api/restapi"
+	"Vectory/gen/api/restapi/operations"
 	"flag"
+	"github.com/go-openapi/loads"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"log"
+	"net/http"
 )
 
 func main() {
@@ -20,11 +24,27 @@ func main() {
 		log.Fatalf("startup: %v", err)
 	}
 
-	vectory, err := db.NewDB(cfg)
-	err = vectory.CreateCollection(context.TODO(), nil)
+	vectoryDB, err := db.NewDB(cfg)
+
+	apiSpec, err := loads.Spec("./api/spec.yaml")
 	if err != nil {
 		log.Fatalf("startup: %v", err)
 	}
+
+	api := operations.NewVectoryAPI(apiSpec)
+	handlers.InitHandlers(api, vectoryDB)
+
+	server := restapi.NewServer(api)
+	server.Port = cfg.ListenPort
+
+	defer server.Shutdown()
+
+	server.ConfigureAPI()
+
+	fs := http.FileServer(http.Dir("./swagger-ui"))
+	http.Handle("/swaggerui/", http.StripPrefix("/swaggerui/", fs))
+
+	log.Fatal(server.Serve())
 }
 
 func readConfig(path string) (*db.Config, error) {
