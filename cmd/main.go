@@ -10,7 +10,6 @@ import (
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"log"
-	"net/http"
 )
 
 func main() {
@@ -40,9 +39,6 @@ func main() {
 	defer server.Shutdown()
 
 	server.ConfigureAPI()
-
-	fs := http.FileServer(http.Dir("./swagger-ui"))
-	http.Handle("/swaggerui/", http.StripPrefix("/swaggerui/", fs))
 
 	log.Fatal(server.Serve())
 }
