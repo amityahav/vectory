@@ -3,12 +3,12 @@
 package enttest
 
 import (
-	"Vectory/db/metadata/ent"
+	"Vectory/gen/ent"
 	"context"
 	// required by schema hooks.
-	_ "Vectory/db/metadata/ent/runtime"
+	_ "Vectory/gen/ent/runtime"
 
-	"Vectory/db/metadata/ent/migrate"
+	"Vectory/gen/ent/migrate"
 
 	"entgo.io/ent/dialect/sql/schema"
 )

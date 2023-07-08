@@ -3,8 +3,8 @@
 package ent
 
 import (
-	"Vectory/db/metadata/ent/collection"
-	"Vectory/db/metadata/ent/predicate"
+	"Vectory/gen/ent/collection"
+	"Vectory/gen/ent/predicate"
 	"context"
 
 	"entgo.io/ent/dialect/sql"

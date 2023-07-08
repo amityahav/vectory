@@ -1,5 +1,5 @@
 # the path where Vectory will manage its data
 files_path: ./data
 
-# vectory's api listen port
+# Vectory api listen port
 listen_port: 5000

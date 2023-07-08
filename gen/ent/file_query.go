@@ -3,8 +3,8 @@
 package ent
 
 import (
-	"Vectory/db/metadata/ent/file"
-	"Vectory/db/metadata/ent/predicate"
+	"Vectory/gen/ent/file"
+	"Vectory/gen/ent/predicate"
 	"context"
 	"fmt"
 	"math"

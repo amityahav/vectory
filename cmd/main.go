@@ -23,7 +23,7 @@ func main() {
 		log.Fatalf("startup: %v", err)
 	}
 
-	vectoryDB, err := db.NewDB(cfg)
+	vectoryDB, err := db.Init(cfg)
 	if err != nil {
 		log.Fatalf("startup: %v", err)
 	}
@@ -43,7 +43,10 @@ func main() {
 
 	server.ConfigureAPI()
 
-	log.Fatal(server.Serve())
+	err = server.Serve()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func readConfig(path string) (*db.Config, error) {

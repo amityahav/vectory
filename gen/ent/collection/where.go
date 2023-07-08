@@ -3,7 +3,7 @@
 package collection
 
 import (
-	"Vectory/db/metadata/ent/predicate"
+	"Vectory/gen/ent/predicate"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"

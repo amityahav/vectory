@@ -24,7 +24,8 @@ type DB struct {
 	wal             any
 }
 
-func NewDB(cfg *Config) (*DB, error) {
+// Init initialises Vectory and load collections and additional metadata if exists
+func Init(cfg *Config) (*DB, error) {
 	db := DB{
 		config:      cfg,
 		collections: &sync.Map{},
@@ -45,9 +46,15 @@ func NewDB(cfg *Config) (*DB, error) {
 
 	db.metadataManager = mm
 
+	err = db.load()
+	if err != nil {
+		return nil, err
+	}
+
 	return &db, nil
 }
 
+// CreateCollection creates a new collection in the database and cache it in memory
 func (db *DB) CreateCollection(ctx context.Context, cfg *models.Collection) (int, error) {
 	collectionID, err := db.metadataManager.CreateCollection(ctx, cfg)
 	if err != nil {
@@ -74,6 +81,7 @@ func (db *DB) CreateCollection(ctx context.Context, cfg *models.Collection) (int
 	return collectionID, nil
 }
 
+// DeleteCollection deletes collection both on disk and memory
 func (db *DB) DeleteCollection(ctx context.Context, name string) error {
 	// TODO: persist
 	c, ok := db.collections.Load(name)
@@ -88,6 +96,18 @@ func (db *DB) DeleteCollection(ctx context.Context, name string) error {
 	}
 
 	db.collections.Delete(name)
+
+	return nil
+}
+
+// load collections and metadata to memory
+func (db *DB) load() error {
+	ctx := context.Background()
+
+	_, err := db.metadataManager.GetCollections(ctx)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

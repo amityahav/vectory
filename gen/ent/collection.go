@@ -3,7 +3,7 @@
 package ent
 
 import (
-	"Vectory/db/metadata/ent/collection"
+	"Vectory/gen/ent/collection"
 	"encoding/json"
 	"fmt"
 	"strings"

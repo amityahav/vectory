@@ -1,8 +1,8 @@
 package metadata
 
 import (
-	"Vectory/db/metadata/ent"
 	"Vectory/gen/api/models"
+	"Vectory/gen/ent"
 	"context"
 	_ "github.com/xiaoqidun/entps"
 )
@@ -17,6 +17,7 @@ func NewMetaManager(filesPath string) (*MetaManager, error) {
 		return nil, err
 	}
 
+	// schemas auto migration
 	err = c.Schema.Create(context.Background())
 	if err != nil {
 		return nil, err
@@ -37,4 +38,8 @@ func (m *MetaManager) CreateCollection(ctx context.Context, cfg *models.Collecti
 		Save(ctx)
 
 	return c.ID, err
+}
+
+func (m *MetaManager) GetCollections(ctx context.Context) ([]*ent.Collection, error) {
+	return m.db.Collection.Query().All(ctx)
 }

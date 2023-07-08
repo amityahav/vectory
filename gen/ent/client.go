@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"log"
 
-	"Vectory/db/metadata/ent/migrate"
+	"Vectory/gen/ent/migrate"
 
-	"Vectory/db/metadata/ent/collection"
-	"Vectory/db/metadata/ent/file"
+	"Vectory/gen/ent/collection"
+	"Vectory/gen/ent/file"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"

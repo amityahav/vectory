@@ -3,7 +3,7 @@
 package file
 
 import (
-	"Vectory/db/metadata/ent/predicate"
+	"Vectory/gen/ent/predicate"
 
 	"entgo.io/ent/dialect/sql"
 )

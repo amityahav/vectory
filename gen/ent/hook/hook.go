@@ -3,7 +3,7 @@
 package hook
 
 import (
-	"Vectory/db/metadata/ent"
+	"Vectory/gen/ent"
 	"context"
 	"fmt"
 )
