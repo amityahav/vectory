@@ -24,6 +24,9 @@ func main() {
 	}
 
 	vectoryDB, err := db.NewDB(cfg)
+	if err != nil {
+		log.Fatalf("startup: %v", err)
+	}
 
 	apiSpec, err := loads.Spec("./api/spec.yaml")
 	if err != nil {

@@ -13,9 +13,10 @@ type Collection struct {
 func (Collection) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("name").Unique(),
-		field.String("index"),
+		field.String("index_type"),
 		field.String("data_type"),
 		field.String("embedder"),
+		field.JSON("index_params", map[string]interface{}{}),
 	}
 }
 

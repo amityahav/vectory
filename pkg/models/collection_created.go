@@ -16,7 +16,7 @@ import (
 type CollectionCreated struct {
 
 	// collection id
-	CollectionID string `json:"collection_id,omitempty"`
+	CollectionID int64 `json:"collection_id,omitempty"`
 }
 
 // Validate validates this collection created

@@ -14,12 +14,14 @@ const (
 	FieldID = "id"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
-	// FieldIndex holds the string denoting the index field in the database.
-	FieldIndex = "index"
+	// FieldIndexType holds the string denoting the index_type field in the database.
+	FieldIndexType = "index_type"
 	// FieldDataType holds the string denoting the data_type field in the database.
 	FieldDataType = "data_type"
 	// FieldEmbedder holds the string denoting the embedder field in the database.
 	FieldEmbedder = "embedder"
+	// FieldIndexParams holds the string denoting the index_params field in the database.
+	FieldIndexParams = "index_params"
 	// EdgeFiles holds the string denoting the files edge name in mutations.
 	EdgeFiles = "files"
 	// Table holds the table name of the collection in the database.
@@ -37,9 +39,10 @@ const (
 var Columns = []string{
 	FieldID,
 	FieldName,
-	FieldIndex,
+	FieldIndexType,
 	FieldDataType,
 	FieldEmbedder,
+	FieldIndexParams,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -65,9 +68,9 @@ func ByName(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldName, opts...).ToFunc()
 }
 
-// ByIndex orders the results by the index field.
-func ByIndex(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldIndex, opts...).ToFunc()
+// ByIndexType orders the results by the index_type field.
+func ByIndexType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIndexType, opts...).ToFunc()
 }
 
 // ByDataType orders the results by the data_type field.

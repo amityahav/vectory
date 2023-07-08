@@ -6,10 +6,8 @@ package models
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
-	"github.com/go-openapi/validate"
 )
 
 // Collection collection
@@ -19,9 +17,6 @@ type Collection struct {
 
 	// data type
 	DataType string `json:"data_type,omitempty"`
-
-	// distance metric
-	DistanceMetric string `json:"distance_metric,omitempty"`
 
 	// embedder
 	Embedder string `json:"embedder,omitempty"`
@@ -33,30 +28,11 @@ type Collection struct {
 	IndexType string `json:"index_type,omitempty"`
 
 	// name
-	// Required: true
-	Name *string `json:"name"`
+	Name string `json:"name,omitempty"`
 }
 
 // Validate validates this collection
 func (m *Collection) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateName(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *Collection) validateName(formats strfmt.Registry) error {
-
-	if err := validate.Required("name", "body", m.Name); err != nil {
-		return err
-	}
-
 	return nil
 }
 

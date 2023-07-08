@@ -59,9 +59,9 @@ func Name(v string) predicate.Collection {
 	return predicate.Collection(sql.FieldEQ(FieldName, v))
 }
 
-// Index applies equality check predicate on the "index" field. It's identical to IndexEQ.
-func Index(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldEQ(FieldIndex, v))
+// IndexType applies equality check predicate on the "index_type" field. It's identical to IndexTypeEQ.
+func IndexType(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldEQ(FieldIndexType, v))
 }
 
 // DataType applies equality check predicate on the "data_type" field. It's identical to DataTypeEQ.
@@ -139,69 +139,69 @@ func NameContainsFold(v string) predicate.Collection {
 	return predicate.Collection(sql.FieldContainsFold(FieldName, v))
 }
 
-// IndexEQ applies the EQ predicate on the "index" field.
-func IndexEQ(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldEQ(FieldIndex, v))
+// IndexTypeEQ applies the EQ predicate on the "index_type" field.
+func IndexTypeEQ(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldEQ(FieldIndexType, v))
 }
 
-// IndexNEQ applies the NEQ predicate on the "index" field.
-func IndexNEQ(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldNEQ(FieldIndex, v))
+// IndexTypeNEQ applies the NEQ predicate on the "index_type" field.
+func IndexTypeNEQ(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldNEQ(FieldIndexType, v))
 }
 
-// IndexIn applies the In predicate on the "index" field.
-func IndexIn(vs ...string) predicate.Collection {
-	return predicate.Collection(sql.FieldIn(FieldIndex, vs...))
+// IndexTypeIn applies the In predicate on the "index_type" field.
+func IndexTypeIn(vs ...string) predicate.Collection {
+	return predicate.Collection(sql.FieldIn(FieldIndexType, vs...))
 }
 
-// IndexNotIn applies the NotIn predicate on the "index" field.
-func IndexNotIn(vs ...string) predicate.Collection {
-	return predicate.Collection(sql.FieldNotIn(FieldIndex, vs...))
+// IndexTypeNotIn applies the NotIn predicate on the "index_type" field.
+func IndexTypeNotIn(vs ...string) predicate.Collection {
+	return predicate.Collection(sql.FieldNotIn(FieldIndexType, vs...))
 }
 
-// IndexGT applies the GT predicate on the "index" field.
-func IndexGT(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldGT(FieldIndex, v))
+// IndexTypeGT applies the GT predicate on the "index_type" field.
+func IndexTypeGT(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldGT(FieldIndexType, v))
 }
 
-// IndexGTE applies the GTE predicate on the "index" field.
-func IndexGTE(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldGTE(FieldIndex, v))
+// IndexTypeGTE applies the GTE predicate on the "index_type" field.
+func IndexTypeGTE(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldGTE(FieldIndexType, v))
 }
 
-// IndexLT applies the LT predicate on the "index" field.
-func IndexLT(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldLT(FieldIndex, v))
+// IndexTypeLT applies the LT predicate on the "index_type" field.
+func IndexTypeLT(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldLT(FieldIndexType, v))
 }
 
-// IndexLTE applies the LTE predicate on the "index" field.
-func IndexLTE(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldLTE(FieldIndex, v))
+// IndexTypeLTE applies the LTE predicate on the "index_type" field.
+func IndexTypeLTE(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldLTE(FieldIndexType, v))
 }
 
-// IndexContains applies the Contains predicate on the "index" field.
-func IndexContains(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldContains(FieldIndex, v))
+// IndexTypeContains applies the Contains predicate on the "index_type" field.
+func IndexTypeContains(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldContains(FieldIndexType, v))
 }
 
-// IndexHasPrefix applies the HasPrefix predicate on the "index" field.
-func IndexHasPrefix(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldHasPrefix(FieldIndex, v))
+// IndexTypeHasPrefix applies the HasPrefix predicate on the "index_type" field.
+func IndexTypeHasPrefix(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldHasPrefix(FieldIndexType, v))
 }
 
-// IndexHasSuffix applies the HasSuffix predicate on the "index" field.
-func IndexHasSuffix(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldHasSuffix(FieldIndex, v))
+// IndexTypeHasSuffix applies the HasSuffix predicate on the "index_type" field.
+func IndexTypeHasSuffix(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldHasSuffix(FieldIndexType, v))
 }
 
-// IndexEqualFold applies the EqualFold predicate on the "index" field.
-func IndexEqualFold(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldEqualFold(FieldIndex, v))
+// IndexTypeEqualFold applies the EqualFold predicate on the "index_type" field.
+func IndexTypeEqualFold(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldEqualFold(FieldIndexType, v))
 }
 
-// IndexContainsFold applies the ContainsFold predicate on the "index" field.
-func IndexContainsFold(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldContainsFold(FieldIndex, v))
+// IndexTypeContainsFold applies the ContainsFold predicate on the "index_type" field.
+func IndexTypeContainsFold(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldContainsFold(FieldIndexType, v))
 }
 
 // DataTypeEQ applies the EQ predicate on the "data_type" field.

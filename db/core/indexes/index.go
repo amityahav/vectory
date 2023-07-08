@@ -2,6 +2,11 @@ package indexes
 
 import "Vectory/db/core/indexes/utils"
 
+var SupportedIndexes = map[string]struct{}{
+	"disk_ann": {},
+	"hnsw":     {},
+}
+
 type VectorIndex interface {
 	// Insert a new vector and its corresponding objId
 	Insert(vector []float32, objId uint32) error

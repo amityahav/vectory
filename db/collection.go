@@ -3,18 +3,19 @@ package db
 import (
 	"Vectory/db/core/indexes"
 	"Vectory/db/core/indexes/disk_ann"
+	"Vectory/gen/api/models"
 )
+
+var SupportedDataTypes = map[string]struct{}{
+	"text": {},
+}
 
 var _ CRUD = &Collection{}
 
-type collectionConfig struct {
-	Name      string `json:"name"`
-	IndexType string `json:"index_type"`
-}
-
 type Collection struct {
-	id       any
+	id       int
 	name     string
+	dataType string
 	objStore any //obj_store.db
 	index    indexes.VectorIndex
 	logger   any
@@ -22,14 +23,14 @@ type Collection struct {
 	wal      any
 }
 
-func NewCollection(cfg *collectionConfig) (*Collection, error) {
-	// TODO: persist
+func NewCollection(id int, cfg *models.Collection) (*Collection, error) {
 	c := Collection{
-		id:       nil,
+		id:       id,
 		name:     cfg.Name,
+		dataType: cfg.DataType,
+		embedder: cfg.Embedder,
 		objStore: nil,
 		logger:   nil,
-		embedder: nil,
 		wal:      nil,
 	}
 

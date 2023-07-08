@@ -4,6 +4,7 @@ package ent
 
 import (
 	"Vectory/db/metadata/ent/collection"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -18,12 +19,14 @@ type Collection struct {
 	ID int `json:"id,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
-	// Index holds the value of the "index" field.
-	Index string `json:"index,omitempty"`
+	// IndexType holds the value of the "index_type" field.
+	IndexType string `json:"index_type,omitempty"`
 	// DataType holds the value of the "data_type" field.
 	DataType string `json:"data_type,omitempty"`
 	// Embedder holds the value of the "embedder" field.
 	Embedder string `json:"embedder,omitempty"`
+	// IndexParams holds the value of the "index_params" field.
+	IndexParams map[string]interface{} `json:"index_params,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the CollectionQuery when eager-loading is set.
 	Edges        CollectionEdges `json:"edges"`
@@ -53,9 +56,11 @@ func (*Collection) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case collection.FieldIndexParams:
+			values[i] = new([]byte)
 		case collection.FieldID:
 			values[i] = new(sql.NullInt64)
-		case collection.FieldName, collection.FieldIndex, collection.FieldDataType, collection.FieldEmbedder:
+		case collection.FieldName, collection.FieldIndexType, collection.FieldDataType, collection.FieldEmbedder:
 			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -84,11 +89,11 @@ func (c *Collection) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				c.Name = value.String
 			}
-		case collection.FieldIndex:
+		case collection.FieldIndexType:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field index", values[i])
+				return fmt.Errorf("unexpected type %T for field index_type", values[i])
 			} else if value.Valid {
-				c.Index = value.String
+				c.IndexType = value.String
 			}
 		case collection.FieldDataType:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -101,6 +106,14 @@ func (c *Collection) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field embedder", values[i])
 			} else if value.Valid {
 				c.Embedder = value.String
+			}
+		case collection.FieldIndexParams:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field index_params", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &c.IndexParams); err != nil {
+					return fmt.Errorf("unmarshal field index_params: %w", err)
+				}
 			}
 		default:
 			c.selectValues.Set(columns[i], values[i])
@@ -146,14 +159,17 @@ func (c *Collection) String() string {
 	builder.WriteString("name=")
 	builder.WriteString(c.Name)
 	builder.WriteString(", ")
-	builder.WriteString("index=")
-	builder.WriteString(c.Index)
+	builder.WriteString("index_type=")
+	builder.WriteString(c.IndexType)
 	builder.WriteString(", ")
 	builder.WriteString("data_type=")
 	builder.WriteString(c.DataType)
 	builder.WriteString(", ")
 	builder.WriteString("embedder=")
 	builder.WriteString(c.Embedder)
+	builder.WriteString(", ")
+	builder.WriteString("index_params=")
+	builder.WriteString(fmt.Sprintf("%v", c.IndexParams))
 	builder.WriteByte(')')
 	return builder.String()
 }

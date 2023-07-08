@@ -26,9 +26,9 @@ func (cc *CollectionCreate) SetName(s string) *CollectionCreate {
 	return cc
 }
 
-// SetIndex sets the "index" field.
-func (cc *CollectionCreate) SetIndex(s string) *CollectionCreate {
-	cc.mutation.SetIndex(s)
+// SetIndexType sets the "index_type" field.
+func (cc *CollectionCreate) SetIndexType(s string) *CollectionCreate {
+	cc.mutation.SetIndexType(s)
 	return cc
 }
 
@@ -41,6 +41,12 @@ func (cc *CollectionCreate) SetDataType(s string) *CollectionCreate {
 // SetEmbedder sets the "embedder" field.
 func (cc *CollectionCreate) SetEmbedder(s string) *CollectionCreate {
 	cc.mutation.SetEmbedder(s)
+	return cc
+}
+
+// SetIndexParams sets the "index_params" field.
+func (cc *CollectionCreate) SetIndexParams(m map[string]interface{}) *CollectionCreate {
+	cc.mutation.SetIndexParams(m)
 	return cc
 }
 
@@ -96,14 +102,17 @@ func (cc *CollectionCreate) check() error {
 	if _, ok := cc.mutation.Name(); !ok {
 		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Collection.name"`)}
 	}
-	if _, ok := cc.mutation.Index(); !ok {
-		return &ValidationError{Name: "index", err: errors.New(`ent: missing required field "Collection.index"`)}
+	if _, ok := cc.mutation.IndexType(); !ok {
+		return &ValidationError{Name: "index_type", err: errors.New(`ent: missing required field "Collection.index_type"`)}
 	}
 	if _, ok := cc.mutation.DataType(); !ok {
 		return &ValidationError{Name: "data_type", err: errors.New(`ent: missing required field "Collection.data_type"`)}
 	}
 	if _, ok := cc.mutation.Embedder(); !ok {
 		return &ValidationError{Name: "embedder", err: errors.New(`ent: missing required field "Collection.embedder"`)}
+	}
+	if _, ok := cc.mutation.IndexParams(); !ok {
+		return &ValidationError{Name: "index_params", err: errors.New(`ent: missing required field "Collection.index_params"`)}
 	}
 	return nil
 }
@@ -135,9 +144,9 @@ func (cc *CollectionCreate) createSpec() (*Collection, *sqlgraph.CreateSpec) {
 		_spec.SetField(collection.FieldName, field.TypeString, value)
 		_node.Name = value
 	}
-	if value, ok := cc.mutation.Index(); ok {
-		_spec.SetField(collection.FieldIndex, field.TypeString, value)
-		_node.Index = value
+	if value, ok := cc.mutation.IndexType(); ok {
+		_spec.SetField(collection.FieldIndexType, field.TypeString, value)
+		_node.IndexType = value
 	}
 	if value, ok := cc.mutation.DataType(); ok {
 		_spec.SetField(collection.FieldDataType, field.TypeString, value)
@@ -146,6 +155,10 @@ func (cc *CollectionCreate) createSpec() (*Collection, *sqlgraph.CreateSpec) {
 	if value, ok := cc.mutation.Embedder(); ok {
 		_spec.SetField(collection.FieldEmbedder, field.TypeString, value)
 		_node.Embedder = value
+	}
+	if value, ok := cc.mutation.IndexParams(); ok {
+		_spec.SetField(collection.FieldIndexParams, field.TypeJSON, value)
+		_node.IndexParams = value
 	}
 	if nodes := cc.mutation.FilesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

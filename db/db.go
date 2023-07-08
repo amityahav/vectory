@@ -2,7 +2,9 @@ package db
 
 import (
 	"Vectory/db/metadata"
+	"Vectory/gen/api/models"
 	"context"
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"os"
 	"sync"
@@ -25,7 +27,7 @@ type DB struct {
 func NewDB(cfg *Config) (*DB, error) {
 	db := DB{
 		config:      cfg,
-		collections: nil,
+		collections: &sync.Map{},
 		logger:      logrus.New(),
 		wal:         nil,
 	}
@@ -46,25 +48,30 @@ func NewDB(cfg *Config) (*DB, error) {
 	return &db, nil
 }
 
-func (db *DB) CreateCollection(ctx context.Context, cfg *collectionConfig) error {
-	err := db.metadataManager.CreateCollection(ctx)
+func (db *DB) CreateCollection(ctx context.Context, cfg *models.Collection) (int, error) {
+	collectionID, err := db.metadataManager.CreateCollection(ctx, cfg)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	// TODO: persist
-	if _, ok := db.collections.Load(cfg.Name); ok {
-		return ErrCollectionAlreadyExists
+	if _, ok := db.collections.Load(cfg.Name); ok { // for safety
+		return 0, ErrCollectionAlreadyExists
 	}
 
-	c, err := NewCollection(cfg)
+	// creating collection data's dir
+	err = os.Mkdir(fmt.Sprintf("%s/%s", db.config.FilesPath, cfg.Name), 0750)
+	if err != nil && !os.IsExist(err) {
+		return 0, err
+	}
+
+	c, err := NewCollection(collectionID, cfg)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	db.collections.Store(cfg.Name, c)
+	db.collections.Store(c.name, c)
 
-	return nil
+	return collectionID, nil
 }
 
 func (db *DB) DeleteCollection(ctx context.Context, name string) error {

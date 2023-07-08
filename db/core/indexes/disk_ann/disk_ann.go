@@ -21,13 +21,13 @@ type DiskAnn struct {
 
 	distanceFunction func([]float32, []float32) float32
 
-	listSize          int
-	distanceThreshold float32
-
-	currId               uint32
+	listSize             int
+	distanceThreshold    float32
 	maxDegree            uint32
 	dim                  uint32
 	memoryIndexSizeLimit uint32
+
+	currId uint32
 }
 
 func NewDiskAnn() *DiskAnn {

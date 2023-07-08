@@ -12,9 +12,10 @@ var (
 	CollectionsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "name", Type: field.TypeString, Unique: true},
-		{Name: "index", Type: field.TypeString},
+		{Name: "index_type", Type: field.TypeString},
 		{Name: "data_type", Type: field.TypeString},
 		{Name: "embedder", Type: field.TypeString},
+		{Name: "index_params", Type: field.TypeJSON},
 	}
 	// CollectionsTable holds the schema information for the "collections" table.
 	CollectionsTable = &schema.Table{

@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"Vectory/db/metadata/ent"
+	"Vectory/gen/api/models"
 	"context"
 	_ "github.com/xiaoqidun/entps"
 )
@@ -24,13 +25,16 @@ func NewMetaManager(filesPath string) (*MetaManager, error) {
 	return &MetaManager{db: c}, nil
 }
 
-func (m *MetaManager) CreateCollection(ctx context.Context) error {
-	_, err := m.db.Collection.Create().
-		SetName("cat_images").
-		SetIndex("disk_ann").
-		SetDataType("jpeg").
-		SetEmbedder("word2vec").
+func (m *MetaManager) CreateCollection(ctx context.Context, cfg *models.Collection) (int, error) {
+	params := cfg.IndexParams.(map[string]interface{}) // TODO: change this
+
+	c, err := m.db.Collection.Create().
+		SetName(cfg.Name).
+		SetIndexType(cfg.IndexType).
+		SetDataType(cfg.DataType).
+		SetEmbedder(cfg.Embedder).
+		SetIndexParams(params).
 		Save(ctx)
 
-	return err
+	return c.ID, err
 }

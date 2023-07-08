@@ -681,9 +681,6 @@ definitions:
         index_type:
           type: string
           example: disk_ann
-        distance_metric:
-          type: string
-          example: dot
         embedder:
           type: string
           example: text2vec
@@ -696,7 +693,7 @@ definitions:
       type: object
       properties: 
         collection_id:
-          type: string
+          type: integer
     ApiResponse:
       type: object
       properties:

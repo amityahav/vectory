@@ -134,35 +134,24 @@ func init() {
           "type": "string",
           "x-order": 1
         }
-      },
-      "xml": {
-        "name": "##default"
       }
     },
     "Collection": {
       "type": "object",
-      "required": [
-        "name"
-      ],
       "properties": {
         "data_type": {
           "type": "string",
-          "x-order": 4,
+          "x-order": 3,
           "example": "text"
-        },
-        "distance_metric": {
-          "type": "string",
-          "x-order": 2,
-          "example": "dot"
         },
         "embedder": {
           "type": "string",
-          "x-order": 3,
+          "x-order": 2,
           "example": "text2vec"
         },
         "index_params": {
           "type": "object",
-          "x-order": 5
+          "x-order": 4
         },
         "index_type": {
           "type": "string",
@@ -180,7 +169,7 @@ func init() {
       "type": "object",
       "properties": {
         "collection_id": {
-          "type": "string",
+          "type": "integer",
           "x-order": 0
         }
       }
@@ -304,35 +293,24 @@ func init() {
           "type": "string",
           "x-order": 1
         }
-      },
-      "xml": {
-        "name": "##default"
       }
     },
     "Collection": {
       "type": "object",
-      "required": [
-        "name"
-      ],
       "properties": {
         "data_type": {
           "type": "string",
-          "x-order": 4,
+          "x-order": 3,
           "example": "text"
-        },
-        "distance_metric": {
-          "type": "string",
-          "x-order": 2,
-          "example": "dot"
         },
         "embedder": {
           "type": "string",
-          "x-order": 3,
+          "x-order": 2,
           "example": "text2vec"
         },
         "index_params": {
           "type": "object",
-          "x-order": 5
+          "x-order": 4
         },
         "index_type": {
           "type": "string",
@@ -350,7 +328,7 @@ func init() {
       "type": "object",
       "properties": {
         "collection_id": {
-          "type": "string",
+          "type": "integer",
           "x-order": 0
         }
       }

@@ -35,9 +35,10 @@ type CollectionMutation struct {
 	typ           string
 	id            *int
 	name          *string
-	index         *string
+	index_type    *string
 	data_type     *string
 	embedder      *string
+	index_params  *map[string]interface{}
 	clearedFields map[string]struct{}
 	files         map[int]struct{}
 	removedfiles  map[int]struct{}
@@ -181,40 +182,40 @@ func (m *CollectionMutation) ResetName() {
 	m.name = nil
 }
 
-// SetIndex sets the "index" field.
-func (m *CollectionMutation) SetIndex(s string) {
-	m.index = &s
+// SetIndexType sets the "index_type" field.
+func (m *CollectionMutation) SetIndexType(s string) {
+	m.index_type = &s
 }
 
-// Index returns the value of the "index" field in the mutation.
-func (m *CollectionMutation) Index() (r string, exists bool) {
-	v := m.index
+// IndexType returns the value of the "index_type" field in the mutation.
+func (m *CollectionMutation) IndexType() (r string, exists bool) {
+	v := m.index_type
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldIndex returns the old "index" field's value of the Collection entity.
+// OldIndexType returns the old "index_type" field's value of the Collection entity.
 // If the Collection object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CollectionMutation) OldIndex(ctx context.Context) (v string, err error) {
+func (m *CollectionMutation) OldIndexType(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldIndex is only allowed on UpdateOne operations")
+		return v, errors.New("OldIndexType is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldIndex requires an ID field in the mutation")
+		return v, errors.New("OldIndexType requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldIndex: %w", err)
+		return v, fmt.Errorf("querying old value for OldIndexType: %w", err)
 	}
-	return oldValue.Index, nil
+	return oldValue.IndexType, nil
 }
 
-// ResetIndex resets all changes to the "index" field.
-func (m *CollectionMutation) ResetIndex() {
-	m.index = nil
+// ResetIndexType resets all changes to the "index_type" field.
+func (m *CollectionMutation) ResetIndexType() {
+	m.index_type = nil
 }
 
 // SetDataType sets the "data_type" field.
@@ -287,6 +288,42 @@ func (m *CollectionMutation) OldEmbedder(ctx context.Context) (v string, err err
 // ResetEmbedder resets all changes to the "embedder" field.
 func (m *CollectionMutation) ResetEmbedder() {
 	m.embedder = nil
+}
+
+// SetIndexParams sets the "index_params" field.
+func (m *CollectionMutation) SetIndexParams(value map[string]interface{}) {
+	m.index_params = &value
+}
+
+// IndexParams returns the value of the "index_params" field in the mutation.
+func (m *CollectionMutation) IndexParams() (r map[string]interface{}, exists bool) {
+	v := m.index_params
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIndexParams returns the old "index_params" field's value of the Collection entity.
+// If the Collection object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CollectionMutation) OldIndexParams(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIndexParams is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIndexParams requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIndexParams: %w", err)
+	}
+	return oldValue.IndexParams, nil
+}
+
+// ResetIndexParams resets all changes to the "index_params" field.
+func (m *CollectionMutation) ResetIndexParams() {
+	m.index_params = nil
 }
 
 // AddFileIDs adds the "files" edge to the File entity by ids.
@@ -377,18 +414,21 @@ func (m *CollectionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CollectionMutation) Fields() []string {
-	fields := make([]string, 0, 4)
+	fields := make([]string, 0, 5)
 	if m.name != nil {
 		fields = append(fields, collection.FieldName)
 	}
-	if m.index != nil {
-		fields = append(fields, collection.FieldIndex)
+	if m.index_type != nil {
+		fields = append(fields, collection.FieldIndexType)
 	}
 	if m.data_type != nil {
 		fields = append(fields, collection.FieldDataType)
 	}
 	if m.embedder != nil {
 		fields = append(fields, collection.FieldEmbedder)
+	}
+	if m.index_params != nil {
+		fields = append(fields, collection.FieldIndexParams)
 	}
 	return fields
 }
@@ -400,12 +440,14 @@ func (m *CollectionMutation) Field(name string) (ent.Value, bool) {
 	switch name {
 	case collection.FieldName:
 		return m.Name()
-	case collection.FieldIndex:
-		return m.Index()
+	case collection.FieldIndexType:
+		return m.IndexType()
 	case collection.FieldDataType:
 		return m.DataType()
 	case collection.FieldEmbedder:
 		return m.Embedder()
+	case collection.FieldIndexParams:
+		return m.IndexParams()
 	}
 	return nil, false
 }
@@ -417,12 +459,14 @@ func (m *CollectionMutation) OldField(ctx context.Context, name string) (ent.Val
 	switch name {
 	case collection.FieldName:
 		return m.OldName(ctx)
-	case collection.FieldIndex:
-		return m.OldIndex(ctx)
+	case collection.FieldIndexType:
+		return m.OldIndexType(ctx)
 	case collection.FieldDataType:
 		return m.OldDataType(ctx)
 	case collection.FieldEmbedder:
 		return m.OldEmbedder(ctx)
+	case collection.FieldIndexParams:
+		return m.OldIndexParams(ctx)
 	}
 	return nil, fmt.Errorf("unknown Collection field %s", name)
 }
@@ -439,12 +483,12 @@ func (m *CollectionMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetName(v)
 		return nil
-	case collection.FieldIndex:
+	case collection.FieldIndexType:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetIndex(v)
+		m.SetIndexType(v)
 		return nil
 	case collection.FieldDataType:
 		v, ok := value.(string)
@@ -459,6 +503,13 @@ func (m *CollectionMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetEmbedder(v)
+		return nil
+	case collection.FieldIndexParams:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIndexParams(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Collection field %s", name)
@@ -512,14 +563,17 @@ func (m *CollectionMutation) ResetField(name string) error {
 	case collection.FieldName:
 		m.ResetName()
 		return nil
-	case collection.FieldIndex:
-		m.ResetIndex()
+	case collection.FieldIndexType:
+		m.ResetIndexType()
 		return nil
 	case collection.FieldDataType:
 		m.ResetDataType()
 		return nil
 	case collection.FieldEmbedder:
 		m.ResetEmbedder()
+		return nil
+	case collection.FieldIndexParams:
+		m.ResetIndexParams()
 		return nil
 	}
 	return fmt.Errorf("unknown Collection field %s", name)
