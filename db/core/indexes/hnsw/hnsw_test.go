@@ -4,6 +4,7 @@ import (
 	"Vectory/db/core/indexes/distance"
 	bufio2 "bufio"
 	"encoding/binary"
+	"github.com/pkg/profile"
 	"io"
 	"log"
 	"math"
@@ -21,7 +22,7 @@ func newHnsw() *Hnsw {
 		mMax:                  32,
 		efConstruction:        128,
 		heuristic:             true,
-		distanceType:          distance.Euclidean,
+		distanceType:          distance.DotProduct,
 		extendCandidates:      true,
 		keepPrunedConnections: true,
 	}
@@ -33,10 +34,13 @@ func newHnsw() *Hnsw {
 }
 
 func TestHnsw(t *testing.T) {
+	defer profile.Start(profile.CPUProfile, profile.ProfilePath("./profile")).Stop()
+
 	hnsw := newHnsw()
 	dim := 128
 
 	for i := 0; i < 1000; i++ {
+		log.Printf("%d", i)
 		err := hnsw.Insert(&Vertex{
 			Id:     int64(i),
 			Vector: randomVector(dim),
@@ -160,8 +164,6 @@ func loadSiftQueryVectors(path string) [][]float32 {
 		log.Fatal(err)
 	}
 
-	defer f.Close()
-
 	buf := bufio2.NewReader(f)
 	b := make([]byte, 4)
 
@@ -192,7 +194,6 @@ func loadSiftTruthVectors(path string) [][]int64 {
 		log.Fatal(err)
 	}
 
-	defer f.Close()
 	buf := bufio2.NewReader(f)
 	b := make([]byte, 4)
 
@@ -229,8 +230,6 @@ func sequential(path string) []*Vertex {
 
 	buf := bufio2.NewReader(f)
 	b := make([]byte, 4)
-
-	defer f.Close()
 
 	for i := 0; i < 10000; i++ {
 		dim, err := readUint32(buf, b)
@@ -280,8 +279,6 @@ func concurrent() {
 			if err != nil {
 				log.Fatal(err)
 			}
-
-			defer f.Close()
 
 			buf := bufio2.NewReader(f)
 			b := make([]byte, 4)
