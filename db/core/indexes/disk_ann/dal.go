@@ -35,10 +35,6 @@ func newDal(path string) (*dal, error) {
 	return &d, nil
 }
 
-func (d *dal) close() error {
-	return d.file.Close()
-}
-
 func (d *dal) newMemoryEmptyPage() *page {
 	p := page{
 		data: make([]byte, pageSize),
@@ -82,14 +78,16 @@ func (d *dal) getNextPage() int {
 
 /*
 Index disk layout:
-- Each page is of pageSize size.
-- First page contains size's metadata: vectors dimensions, graph's size, graph's max degree, firstId, index size, s id.
-- All other pages contain vertices, each vertex contains: objId, vector, neighbors.
-- The number of vertices in each page is calculated by: floor(pageSize / (4 * (1 + dim + degree))).
- ------------------------------------------------
+  - Each page is of pageSize size.
+  - First page contains size's metadata: vectors dimensions, graph's size, graph's max degree, firstId, index size, s id.
+  - All other pages contain vertices, each vertex contains: objId, vector, neighbors.
+  - The number of vertices in each page is calculated by: floor(pageSize / (4 * (1 + dim + degree))).
+    ------------------------------------------------
+
 | metadata	| vertices	| vertices	| vertices	|
 |			|			|			|			|
- ------------------------------------------------
+
+	------------------------------------------------
 */
 func (d *dal) writeIndex(mi *MemoryIndex) error {
 	// writing metadata page

@@ -52,12 +52,12 @@ func (mi *MemoryIndex) search(q []float32, k int, listSize int, onlySearch bool)
 	// TODO: locking
 	sVertex := mi.graph.vertices[mi.s]
 	e := utils.Element{
-		Id:       int64(mi.s),
+		Id:       mi.s,
 		Distance: mi.calculateDistance(sVertex.vector, q),
 	}
 
 	if onlySearch {
-		e.DataId = sVertex.objId
+		e.ObjId = sVertex.objId
 	}
 
 	resultSet := utils.NewMinMaxHeapFromSlice([]utils.Element{e})
@@ -85,12 +85,12 @@ func (mi *MemoryIndex) search(q []float32, k int, listSize int, onlySearch bool)
 			nVertex := mi.graph.vertices[n]
 
 			e = utils.Element{
-				Id:       int64(n),
+				Id:       n,
 				Distance: mi.calculateDistance(nVertex.vector, q),
 			}
 
 			if onlySearch {
-				e.DataId = nVertex.objId
+				e.ObjId = nVertex.objId
 			}
 
 			utils.Push(resultSet, e)
@@ -167,7 +167,7 @@ func (mi *MemoryIndex) insert(v []float32, listSize int, distanceThreshold float
 			for _, nn := range neighbor.neighbors {
 				nnVertex := mi.graph.vertices[nn]
 				distances = append(distances, utils.Element{
-					Id:       int64(nn),
+					Id:       nn,
 					Distance: mi.calculateDistance(nnVertex.vector, neighbor.vector),
 				})
 			}
@@ -190,7 +190,7 @@ func (mi *MemoryIndex) robustPrune(v *Vertex, candidates []utils.Element, distan
 	for _, n := range v.neighbors {
 		nVertex := mi.graph.vertices[n]
 		e := utils.Element{
-			Id:       int64(n),
+			Id:       n,
 			Distance: mi.calculateDistance(v.vector, nVertex.vector),
 		}
 
@@ -245,7 +245,7 @@ func (mi *MemoryIndex) snapshot(path string) error {
 
 	mi.snapshotPath = path
 
-	return d.close()
+	return nil
 }
 
 func (mi *MemoryIndex) serializeMetadata(buff []byte) int {
@@ -301,7 +301,6 @@ func loadMemoryIndex(path string) (*MemoryIndex, error) {
 		return nil, err
 	}
 
-	err = d.close()
 	if err != nil {
 		return nil, err
 	}

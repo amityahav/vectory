@@ -23,7 +23,9 @@ func TestMemoryIndex(t *testing.T) {
 			}
 			err := mi.insert(randomVector(mi.dim), listSize, a, i, i)
 			require.NoError(t, err)
-			log.Printf("inserted %d", i)
+			if i%100 == 0 {
+				log.Printf("inserted %d", i)
+			}
 
 		}
 	})

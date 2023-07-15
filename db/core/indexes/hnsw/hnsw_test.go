@@ -18,11 +18,12 @@ import (
 
 func newHnsw() *Hnsw {
 	cfg := hnswConfig{
-		m:                     32,
+		m:                     16,
 		mMax:                  32,
-		efConstruction:        128,
+		efConstruction:        400,
+		ef:                    400,
 		heuristic:             true,
-		distanceType:          distance.DotProduct,
+		distanceType:          distance.Euclidean,
 		extendCandidates:      true,
 		keepPrunedConnections: true,
 	}
@@ -39,22 +40,19 @@ func TestHnsw(t *testing.T) {
 	hnsw := newHnsw()
 	dim := 128
 
-	for i := 0; i < 1000; i++ {
-		log.Printf("%d", i)
-		err := hnsw.Insert(&Vertex{
-			Id:     int64(i),
-			Vector: randomVector(dim),
-		})
+	for i := 0; i < 10000; i++ {
+		if i%1000 == 0 {
+			log.Printf("%d", i)
+		}
+
+		err := hnsw.Insert(randomVector(dim), 1)
 
 		if err != nil {
 			t.Error(err)
 		}
 	}
 
-	_ = hnsw.Search(&Vertex{
-		Id:     -1,
-		Vector: randomVector(dim),
-	}, 10, 400)
+	_ = hnsw.Search(randomVector(dim), 10)
 
 }
 
@@ -71,13 +69,13 @@ func randomVector(dim int) []float32 {
 func TestSift(t *testing.T) {
 	// Loading vectors
 	start := time.Now()
-	vertices := loadSiftBaseVectors("./siftsmall/siftsmall_base.fvecs")
+	vectors := loadSiftBaseVectors("./siftsmall/siftsmall_base.fvecs")
 	end := time.Since(start)
 	log.Printf("Loading vectors took: %s", end.String())
 
 	// Building index
 	start = time.Now()
-	hnsw := buildIndexSequential(vertices)
+	hnsw := buildIndexSequential(vectors)
 	end = time.Since(start)
 	log.Printf("Inserting vectors took: %s", end.String())
 
@@ -88,12 +86,12 @@ func TestSift(t *testing.T) {
 	var avgRecall float32
 	for i, q := range queryVectors {
 		var match float32
-		ann := hnsw.Search(&Vertex{Vector: q}, 100, 64)
+		ann := hnsw.Search(q, 100)
 		truth := truthNeighbors[i]
 
 		for _, n := range ann {
 			for _, tn := range truth {
-				if n == tn {
+				if n.Id == tn {
 					match++
 					break
 				}
@@ -110,22 +108,24 @@ func TestSift(t *testing.T) {
 	log.Printf("avg recall: %f", avgRecall)
 }
 
-func buildIndexSequential(vertices []*Vertex) *Hnsw {
+func buildIndexSequential(vectors [][]float32) *Hnsw {
 	hnsw := newHnsw()
 
-	for i, v := range vertices {
-		err := hnsw.Insert(v)
+	for i, v := range vectors {
+		err := hnsw.Insert(v, 1)
 		if err != nil {
-			log.Printf("failed inserting V#%d. err: %s", v.Id, err.Error())
+			log.Printf("failed inserting V#%d. err: %s", i, err.Error())
 		}
 
-		log.Printf("Inserted %d vertices", i)
+		if i%1000 == 0 {
+			log.Printf("Inserted %d vertices", i)
+		}
 	}
 
 	return hnsw
 }
 
-func buildIndexParallel(insertionChannel chan *Vertex) *Hnsw {
+func buildIndexParallel(insertionChannel chan []float32) *Hnsw {
 	hnsw := newHnsw()
 	var wg sync.WaitGroup
 
@@ -140,7 +140,7 @@ func buildIndexParallel(insertionChannel chan *Vertex) *Hnsw {
 					break
 				}
 
-				err := hnsw.Insert(v)
+				err := hnsw.Insert(v, 1)
 				if err != nil {
 					log.Fatal(err)
 					return
@@ -154,7 +154,7 @@ func buildIndexParallel(insertionChannel chan *Vertex) *Hnsw {
 	return hnsw
 }
 
-func loadSiftBaseVectors(path string) []*Vertex {
+func loadSiftBaseVectors(path string) [][]float32 {
 	return sequential(path)
 }
 
@@ -188,7 +188,7 @@ func loadSiftQueryVectors(path string) [][]float32 {
 	return vectors
 }
 
-func loadSiftTruthVectors(path string) [][]int64 {
+func loadSiftTruthVectors(path string) [][]uint32 {
 	f, err := os.Open(path)
 	if err != nil {
 		log.Fatal(err)
@@ -197,7 +197,7 @@ func loadSiftTruthVectors(path string) [][]int64 {
 	buf := bufio2.NewReader(f)
 	b := make([]byte, 4)
 
-	vectors := make([][]int64, 100)
+	vectors := make([][]uint32, 100)
 
 	for i := 0; i < 100; i++ {
 		dim, err := readUint32(buf, b)
@@ -205,23 +205,23 @@ func loadSiftTruthVectors(path string) [][]int64 {
 			log.Fatal(err)
 		}
 
-		vectors[i] = make([]int64, dim)
+		vectors[i] = make([]uint32, dim)
 
 		for j := 0; j < int(dim); j++ {
-			fl32, err := readUint32(buf, b)
+			u32, err := readUint32(buf, b)
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			vectors[i][j] = int64(fl32)
+			vectors[i][j] = u32
 		}
 	}
 
 	return vectors
 }
 
-func sequential(path string) []*Vertex {
-	s := make([]*Vertex, 0, 10000)
+func sequential(path string) [][]float32 {
+	s := make([][]float32, 0, 10000)
 
 	f, err := os.Open(path)
 	if err != nil {
@@ -237,26 +237,23 @@ func sequential(path string) []*Vertex {
 			log.Fatal(err)
 		}
 
-		v := Vertex{
-			Id:     int64(i),
-			Vector: make([]float32, dim),
-		}
+		vector := make([]float32, dim)
 
 		for j := 0; j < int(dim); j++ {
-			v.Vector[j], err = readFloat32(buf, b)
+			vector[j], err = readFloat32(buf, b)
 			if err != nil {
 				log.Fatal(err)
 			}
 
 		}
 
-		s = append(s, &v)
+		s = append(s, vector)
 	}
 
 	return s
 }
 func concurrent() {
-	insertionChannel := make(chan *Vertex)
+	insertionChannel := make(chan []float32)
 	cpus := runtime.NumCPU()
 	vectorsCount := 10000
 	chunkSize := vectorsCount / cpus
@@ -295,19 +292,16 @@ func concurrent() {
 					log.Fatal(err)
 				}
 
-				v := Vertex{
-					Id:     int64(chunkNum*chunkSize + j),
-					Vector: make([]float32, dim),
-				}
+				vector := make([]float32, dim)
 
 				for l := 0; l < int(dim); l++ {
-					v.Vector[l], err = readFloat32(buf, b)
+					vector[l], err = readFloat32(buf, b)
 					if err != nil {
 						log.Fatal(err)
 					}
 				}
 
-				insertionChannel <- &v
+				insertionChannel <- vector
 			}
 		}(i)
 	}
@@ -316,10 +310,6 @@ func concurrent() {
 		wg.Wait()
 		close(insertionChannel)
 	}()
-
-	for v := range insertionChannel {
-		log.Printf("Loaded V#%d", v.Id)
-	}
 }
 
 func readUint32(f io.Reader, b []byte) (uint32, error) {
