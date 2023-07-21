@@ -1,8 +1,8 @@
 package handlers
 
 import (
+	"Vectory/api/validators"
 	"Vectory/db"
-	"Vectory/db/core/indexes"
 	"Vectory/gen/api/models"
 	"Vectory/gen/api/restapi/operations"
 	"Vectory/gen/api/restapi/operations/collection"
@@ -27,7 +27,7 @@ func (h *CollectionHandler) getCollection(params collection.GetCollectionParams)
 func (h *CollectionHandler) addCollection(params collection.AddCollectionParams) middleware.Responder {
 	ctx := params.HTTPRequest.Context()
 
-	err := validateCollection(params.Collection)
+	err := validators.ValidateCollection(params.Collection)
 	if err != nil {
 		return middleware.Error(http.StatusBadRequest, err)
 	}
@@ -42,33 +42,4 @@ func (h *CollectionHandler) addCollection(params collection.AddCollectionParams)
 
 func (h *CollectionHandler) deleteCollection(params collection.DeleteCollectionParams) middleware.Responder {
 	return collection.NewDeleteCollectionOK().WithPayload(&models.Collection{})
-}
-
-// TODO: validate
-func validateCollection(cfg *models.Collection) error {
-	if cfg.Name == "" {
-		return ErrCollectionNameEmpty
-	}
-
-	if _, ok := indexes.SupportedIndexes[cfg.IndexType]; !ok {
-		return ErrIndexTypeUnsupported
-	}
-
-	if _, ok := db.SupportedDataTypes[cfg.DataType]; !ok {
-		return ErrDataTypeUnsupported
-	}
-
-	return validateIndexParams(cfg.IndexType, cfg.IndexParams)
-}
-
-// TODO: validate
-func validateIndexParams(indexType string, params interface{}) error {
-	switch indexType {
-	case "disk_ann":
-
-	case "hnsw":
-
-	}
-
-	return nil
 }

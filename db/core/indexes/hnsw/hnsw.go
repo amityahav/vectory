@@ -4,6 +4,7 @@ import (
 	"Vectory/db/core/indexes"
 	"Vectory/db/core/indexes/distance"
 	"Vectory/db/core/indexes/utils"
+	"Vectory/entities"
 	"container/heap"
 	"fmt"
 	"math"
@@ -15,77 +16,48 @@ var _ indexes.VectorIndex = &Hnsw{}
 
 type Hnsw struct {
 	sync.RWMutex
-	hnswConfig
-
-	entrypointID    int64
-	currentMaxLayer int64
-
-	nodes           map[int64]*Vertex
-	distFunc        func([]float32, []float32) float32
-	selectNeighbors func(*Vertex, []utils.Element, int, int64, bool, bool) []int64
-
+	m                int
+	mMax             int
+	mMax0            int
+	efConstruction   int
+	ef               int
+	mL               float64
+	entrypointID     int64
+	currentMaxLayer  int64
+	nodes            map[int64]*Vertex
+	distFunc         func([]float32, []float32) float32
+	selectNeighbors  func(*Vertex, []utils.Element, int) []int64
 	initialInsertion *sync.Once
-
-	curId int64
+	curId            int64
 }
 
-type hnswConfig struct {
-	// Number of established connections
-	m int
-
-	// Maximum number of connections for each element per layer
-	mMax int
-
-	// Maximum number of connections for each element at layer zero
-	mMax0 int
-
-	// size of the dynamic candidate list
-	efConstruction int
-
-	ef int
-
-	// Normalization factor for level generation
-	mL float64
-
-	heuristic bool
-
-	distanceType string
-
-	// Flags for the heuristic neighbors selection
-	extendCandidates      bool
-	keepPrunedConnections bool
-}
-
-func NewHnsw(config hnswConfig) *Hnsw {
-	hnsw := Hnsw{
-		hnswConfig:       config,
-		entrypointID:     0,
-		currentMaxLayer:  0,
-		nodes:            make(map[int64]*Vertex),
+func NewHnsw(params entities.HnswParams) *Hnsw {
+	h := Hnsw{
+		m:                params.M,
+		mMax:             params.MMax,
+		ef:               params.Ef,
+		efConstruction:   params.EfConstruction,
+		nodes:            make(map[int64]*Vertex), // TODO: change to an array
 		initialInsertion: &sync.Once{},
 	}
 
-	hnsw.setSelectNeighborsFunc(hnsw.heuristic)
-	hnsw.setDistanceFunction(hnsw.distanceType)
+	h.mMax0 = 2 * h.mMax
+	h.mL = 1 / math.Log(float64(h.m))
 
-	return &hnsw
-}
-
-func (h *Hnsw) setDistanceFunction(distanceType string) {
-	switch distanceType {
-	case distance.DotProduct:
+	switch params.DistanceType {
+	case entities.DotProduct:
 		h.distFunc = distance.Dot
-	case distance.Euclidean:
+	case entities.Euclidean:
 		h.distFunc = distance.EuclideanDistance
 	}
-}
 
-func (h *Hnsw) setSelectNeighborsFunc(heuristic bool) {
 	h.selectNeighbors = h.selectNeighborsSimple
 
-	if heuristic {
+	if params.Heuristic {
 		h.selectNeighbors = h.selectNeighborsHeuristic
 	}
+
+	return &h
 }
 
 func (h *Hnsw) Search(q []float32, k int) []utils.Element {
@@ -193,7 +165,7 @@ func (h *Hnsw) Insert(vector []float32, vectorId int64, objId uint64) error {
 	maxConn := h.mMax
 	for l := min(currentMaxLayer, vertexLayer); l >= 0; l-- {
 		nearestNeighbors = h.searchLayer(&v, eps, h.efConstruction, l)
-		neighbors := h.selectNeighbors(&v, nearestNeighbors, h.m, l, h.extendCandidates, h.keepPrunedConnections)
+		neighbors := h.selectNeighbors(&v, nearestNeighbors, h.m)
 
 		v.SetConnections(l, neighbors)
 
@@ -227,7 +199,7 @@ func (h *Hnsw) Insert(vector []float32, vectorId int64, objId uint64) error {
 					elems = append(elems, utils.Element{Id: nn, Distance: h.calculateDistance(nVertex.vector, nnVertex.vector)})
 				}
 
-				newNeighbors := h.selectNeighbors(nVertex, elems, maxConn, l, h.extendCandidates, h.keepPrunedConnections)
+				newNeighbors := h.selectNeighbors(nVertex, elems, maxConn)
 
 				nVertex.SetConnections(l, newNeighbors)
 			}
@@ -305,7 +277,7 @@ func (h *Hnsw) searchLayer(v *Vertex, eps []utils.Element, ef int, level int64) 
 	return nearestNeighbors.Elements
 }
 
-func (h *Hnsw) selectNeighborsHeuristic(v *Vertex, candidates []utils.Element, m int, level int64, extendCandidates, keepPruned bool) []int64 {
+func (h *Hnsw) selectNeighborsHeuristic(v *Vertex, candidates []utils.Element, m int) []int64 {
 	result := make([]int64, 0, m)
 
 	workingQ := utils.NewMinHeapFromSliceDeep(candidates, cap(candidates))
@@ -382,7 +354,7 @@ func (h *Hnsw) selectNeighborsHeuristic(v *Vertex, candidates []utils.Element, m
 	return result
 }
 
-func (h *Hnsw) selectNeighborsSimple(_ *Vertex, candidates []utils.Element, m int, _ int64, _, _ bool) []int64 {
+func (h *Hnsw) selectNeighborsSimple(_ *Vertex, candidates []utils.Element, m int) []int64 {
 	size := m
 	if len(candidates) < size {
 		size = len(candidates)

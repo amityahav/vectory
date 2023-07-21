@@ -40,6 +40,10 @@ func (m *MetaManager) CreateCollection(ctx context.Context, cfg *models.Collecti
 	return c.ID, err
 }
 
+func (m *MetaManager) DeleteCollection(ctx context.Context, name string) error {
+	return nil
+}
+
 func (m *MetaManager) GetCollections(ctx context.Context) ([]*ent.Collection, error) {
 	return m.db.Collection.Query().All(ctx)
 }

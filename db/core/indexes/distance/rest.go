@@ -2,8 +2,6 @@ package distance
 
 import "math"
 
-const Euclidean = "euclidean_distance"
-
 func EuclideanDistance(v1, v2 []float32) float32 {
 	var sum float64
 

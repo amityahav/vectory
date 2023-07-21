@@ -1,7 +1,6 @@
 package hnsw
 
 import (
-	"Vectory/db/core/indexes/distance"
 	bufio2 "bufio"
 	"encoding/binary"
 	"github.com/pkg/profile"
@@ -22,21 +21,7 @@ type job struct {
 }
 
 func newHnsw() *Hnsw {
-	cfg := hnswConfig{
-		m:                     8,
-		mMax:                  8,
-		efConstruction:        128,
-		ef:                    64,
-		heuristic:             true,
-		distanceType:          distance.Euclidean,
-		extendCandidates:      true,
-		keepPrunedConnections: true,
-	}
-
-	cfg.mMax0 = 2 * cfg.mMax
-	cfg.mL = 1 / math.Log(float64(cfg.m))
-
-	return NewHnsw(cfg)
+	return nil
 }
 
 func TestHnsw(t *testing.T) {

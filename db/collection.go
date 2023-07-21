@@ -2,13 +2,11 @@ package db
 
 import (
 	"Vectory/db/core/indexes"
-	"Vectory/db/core/indexes/disk_ann"
+	"Vectory/db/core/indexes/hnsw"
+	"Vectory/entities"
 	"Vectory/gen/api/models"
+	"encoding/json"
 )
-
-var SupportedDataTypes = map[string]struct{}{
-	"text": {},
-}
 
 var _ CRUD = &Collection{}
 
@@ -34,9 +32,14 @@ func NewCollection(id int, cfg *models.Collection) (*Collection, error) {
 		wal:      nil,
 	}
 
-	switch cfg.IndexType {
-	case "disk_ann":
-		c.index = disk_ann.NewDiskAnn()
+	switch cfg.IndexType { // cfg.IndexParams has already been validated
+	case entities.Hnsw:
+		var params entities.HnswParams
+
+		b, _ := json.Marshal(cfg.IndexParams)
+		_ = json.Unmarshal(b, &params)
+
+		c.index = hnsw.NewHnsw(params)
 	default:
 		return nil, ErrUnknownIndexType
 	}
