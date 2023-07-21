@@ -3,10 +3,9 @@ package db
 import (
 	"Vectory/db/metadata"
 	"Vectory/gen/api/models"
+	"Vectory/gen/ent"
 	"context"
-	"fmt"
 	"github.com/sirupsen/logrus"
-	"os"
 	"sync"
 )
 
@@ -24,20 +23,15 @@ type DB struct {
 	wal             any
 }
 
-// Init initialises Vectory and load collections and additional metadata if exists
+// Init initialises Vectory and restore collections and additional metadata if exists
 func Init(cfg *Config) (*DB, error) {
 	db := DB{
-		config:      cfg,
-		collections: &sync.Map{},
-		logger:      logrus.New(),
-		wal:         nil,
+		config: cfg,
+		logger: logrus.New(),
+		wal:    nil,
 	}
 
 	db.logger.SetFormatter(&logrus.JSONFormatter{})
-
-	if stat, err := os.Stat(cfg.FilesPath); err != nil || !stat.IsDir() {
-		return nil, ErrPathNotDirectory
-	}
 
 	mm, err := metadata.NewMetaManager(db.config.FilesPath)
 	if err != nil {
@@ -46,7 +40,7 @@ func Init(cfg *Config) (*DB, error) {
 
 	db.metadataManager = mm
 
-	err = db.load()
+	err = db.restore()
 	if err != nil {
 		return nil, err
 	}
@@ -65,12 +59,6 @@ func (db *DB) CreateCollection(ctx context.Context, cfg *models.Collection) (int
 		return 0, ErrCollectionAlreadyExists
 	}
 
-	// creating collection data's dir
-	err = os.Mkdir(fmt.Sprintf("%s/%s", db.config.FilesPath, cfg.Name), 0750)
-	if err != nil && !os.IsExist(err) {
-		return 0, err
-	}
-
 	c, err := NewCollection(collectionID, cfg)
 	if err != nil {
 		return 0, err
@@ -83,14 +71,7 @@ func (db *DB) CreateCollection(ctx context.Context, cfg *models.Collection) (int
 
 // DeleteCollection deletes collection both on disk and memory
 func (db *DB) DeleteCollection(ctx context.Context, name string) error {
-	// TODO: persist
-	c, ok := db.collections.Load(name)
-
-	if !ok {
-		return ErrCollectionDoesntExist
-	}
-
-	err := c.(*Collection).DeleteMyself()
+	err := db.metadataManager.DeleteCollection(ctx, name)
 	if err != nil {
 		return err
 	}
@@ -100,13 +81,31 @@ func (db *DB) DeleteCollection(ctx context.Context, name string) error {
 	return nil
 }
 
-// load collections and metadata to memory
-func (db *DB) load() error {
+// GetCollection returns the collection with name
+func (db *DB) GetCollection(ctx context.Context, name string) (*ent.Collection, error) {
+	return db.metadataManager.GetCollection(ctx, name)
+}
+
+// restore collections and metadata to memory
+func (db *DB) restore() error {
 	ctx := context.Background()
 
-	_, err := db.metadataManager.GetCollections(ctx)
+	db.collections = &sync.Map{}
+
+	cols, err := db.metadataManager.GetCollections(ctx)
 	if err != nil {
 		return err
+	}
+
+	for _, col := range cols {
+		nc := Collection{}
+
+		err = nc.restore(col, db.config.FilesPath)
+		if err != nil {
+			return err
+		}
+
+		db.collections.Store(nc.name, nc)
 	}
 
 	return nil

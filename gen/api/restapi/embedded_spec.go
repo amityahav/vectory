@@ -107,7 +107,7 @@ func init() {
           "200": {
             "description": "valid operation",
             "schema": {
-              "$ref": "#/definitions/Collection"
+              "$ref": "#/definitions/ApiResponse"
             }
           },
           "400": {
@@ -121,18 +121,9 @@ func init() {
     "ApiResponse": {
       "type": "object",
       "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32",
-          "x-order": 0
-        },
         "message": {
           "type": "string",
-          "x-order": 2
-        },
-        "type": {
-          "type": "string",
-          "x-order": 1
+          "x-order": 0
         }
       }
     },
@@ -266,7 +257,7 @@ func init() {
           "200": {
             "description": "valid operation",
             "schema": {
-              "$ref": "#/definitions/Collection"
+              "$ref": "#/definitions/ApiResponse"
             }
           },
           "400": {
@@ -280,18 +271,9 @@ func init() {
     "ApiResponse": {
       "type": "object",
       "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32",
-          "x-order": 0
-        },
         "message": {
           "type": "string",
-          "x-order": 2
-        },
-        "type": {
-          "type": "string",
-          "x-order": 1
+          "x-order": 0
         }
       }
     },

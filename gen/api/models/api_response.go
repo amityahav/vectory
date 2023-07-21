@@ -15,12 +15,6 @@ import (
 // swagger:model ApiResponse
 type APIResponse struct {
 
-	// code
-	Code int32 `json:"code,omitempty"`
-
-	// type
-	Type string `json:"type,omitempty"`
-
 	// message
 	Message string `json:"message,omitempty"`
 }

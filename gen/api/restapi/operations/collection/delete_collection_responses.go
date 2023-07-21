@@ -25,7 +25,7 @@ type DeleteCollectionOK struct {
 	/*
 	  In: Body
 	*/
-	Payload *models.Collection `json:"body,omitempty"`
+	Payload *models.APIResponse `json:"body,omitempty"`
 }
 
 // NewDeleteCollectionOK creates DeleteCollectionOK with default headers values
@@ -35,13 +35,13 @@ func NewDeleteCollectionOK() *DeleteCollectionOK {
 }
 
 // WithPayload adds the payload to the delete collection o k response
-func (o *DeleteCollectionOK) WithPayload(payload *models.Collection) *DeleteCollectionOK {
+func (o *DeleteCollectionOK) WithPayload(payload *models.APIResponse) *DeleteCollectionOK {
 	o.Payload = payload
 	return o
 }
 
 // SetPayload sets the payload to the delete collection o k response
-func (o *DeleteCollectionOK) SetPayload(payload *models.Collection) {
+func (o *DeleteCollectionOK) SetPayload(payload *models.APIResponse) {
 	o.Payload = payload
 }
 

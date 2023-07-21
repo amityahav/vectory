@@ -51,20 +51,20 @@ func NewDeleteCollectionOK() *DeleteCollectionOK {
 valid operation
 */
 type DeleteCollectionOK struct {
-	Payload *models.Collection
+	Payload *models.APIResponse
 }
 
 func (o *DeleteCollectionOK) Error() string {
 	return fmt.Sprintf("[DELETE /v1/collection/{collectionName}][%d] deleteCollectionOK  %+v", 200, o.Payload)
 }
 
-func (o *DeleteCollectionOK) GetPayload() *models.Collection {
+func (o *DeleteCollectionOK) GetPayload() *models.APIResponse {
 	return o.Payload
 }
 
 func (o *DeleteCollectionOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.Collection)
+	o.Payload = new(models.APIResponse)
 
 	// response payload
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && err != io.EOF {

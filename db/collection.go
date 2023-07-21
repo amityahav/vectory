@@ -5,6 +5,7 @@ import (
 	"Vectory/db/core/indexes/hnsw"
 	"Vectory/entities"
 	"Vectory/gen/api/models"
+	"Vectory/gen/ent"
 	"encoding/json"
 )
 
@@ -71,6 +72,18 @@ func (c *Collection) SemanticSearch(obj any, k int) {
 	// TODO: create embeddings from obj and get K-NN and then retrieve object ids from objStore
 }
 
-func (c *Collection) DeleteMyself() error {
+func (c *Collection) restore(col *ent.Collection, filesPath string) error {
+	c.id = col.ID
+	c.name = col.Name
+	c.dataType = col.DataType
+
+	// restore index
+
+	// restore objStore
+
+	// restore embedder
+
+	// restore wal
+
 	return nil
 }

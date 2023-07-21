@@ -21,7 +21,22 @@ func (h *CollectionHandler) initHandlers(api *operations.VectoryAPI) {
 }
 
 func (h *CollectionHandler) getCollection(params collection.GetCollectionParams) middleware.Responder {
-	return collection.NewGetCollectionOK().WithPayload(&models.Collection{})
+	ctx := params.HTTPRequest.Context()
+
+	c, err := h.db.GetCollection(ctx, params.CollectionName)
+	if err != nil {
+		return middleware.Error(http.StatusInternalServerError, handleError(err))
+	}
+
+	col := models.Collection{
+		Name:        c.Name,
+		IndexType:   c.IndexType,
+		Embedder:    c.Embedder,
+		DataType:    c.DataType,
+		IndexParams: c.IndexParams,
+	}
+
+	return collection.NewGetCollectionOK().WithPayload(&col)
 }
 
 func (h *CollectionHandler) addCollection(params collection.AddCollectionParams) middleware.Responder {
@@ -29,17 +44,24 @@ func (h *CollectionHandler) addCollection(params collection.AddCollectionParams)
 
 	err := validators.ValidateCollection(params.Collection)
 	if err != nil {
-		return middleware.Error(http.StatusBadRequest, err)
+		return middleware.Error(http.StatusBadRequest, handleError(err))
 	}
 
 	id, err := h.db.CreateCollection(ctx, params.Collection)
 	if err != nil {
-		return middleware.Error(http.StatusInternalServerError, err)
+		return middleware.Error(http.StatusInternalServerError, handleError(err))
 	}
 
 	return collection.NewAddCollectionCreated().WithPayload(&models.CollectionCreated{CollectionID: int64(id)})
 }
 
 func (h *CollectionHandler) deleteCollection(params collection.DeleteCollectionParams) middleware.Responder {
-	return collection.NewDeleteCollectionOK().WithPayload(&models.Collection{})
+	ctx := params.HTTPRequest.Context()
+
+	err := h.db.DeleteCollection(ctx, params.CollectionName)
+	if err != nil {
+		return middleware.Error(http.StatusInternalServerError, handleError(err))
+	}
+
+	return collection.NewDeleteCollectionOK().WithPayload(&models.APIResponse{Message: "deleted successfully"})
 }
