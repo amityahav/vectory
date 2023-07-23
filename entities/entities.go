@@ -15,8 +15,6 @@ type Collection struct {
 
 	// index params
 	IndexParams interface{} `json:"index_params"`
-
-	validated bool
 }
 
 type HnswParams struct {
