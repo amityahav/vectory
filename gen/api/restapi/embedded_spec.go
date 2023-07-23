@@ -159,8 +159,8 @@ func init() {
     "CollectionCreated": {
       "type": "object",
       "properties": {
-        "collection_id": {
-          "type": "integer",
+        "collection_name": {
+          "type": "string",
           "x-order": 0
         }
       }
@@ -309,8 +309,8 @@ func init() {
     "CollectionCreated": {
       "type": "object",
       "properties": {
-        "collection_id": {
-          "type": "integer",
+        "collection_name": {
+          "type": "string",
           "x-order": 0
         }
       }

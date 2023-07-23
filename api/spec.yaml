@@ -692,8 +692,8 @@ definitions:
     CollectionCreated:
       type: object
       properties: 
-        collection_id:
-          type: integer
+        collection_name:
+          type: string
     ApiResponse:
       type: object
       properties:

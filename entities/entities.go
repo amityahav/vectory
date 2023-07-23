@@ -16,3 +16,20 @@ type HnswParams struct {
 
 	DistanceType string `json:"distance_type"`
 }
+
+type Collection struct {
+	// name
+	Name string `json:"name"`
+
+	// index type
+	IndexType string `json:"index_type"`
+
+	// embedder
+	Embedder string `json:"embedder"`
+
+	// data type
+	DataType string `json:"data_type"`
+
+	// index params
+	IndexParams interface{} `json:"index_params"`
+}

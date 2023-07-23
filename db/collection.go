@@ -4,36 +4,41 @@ import (
 	"Vectory/db/core/indexes"
 	"Vectory/db/core/indexes/hnsw"
 	"Vectory/entities"
-	"Vectory/gen/api/models"
 	"Vectory/gen/ent"
 	"encoding/json"
+	"fmt"
 )
 
 var _ CRUD = &Collection{}
 
 type Collection struct {
-	id       int
-	name     string
-	dataType string
-	objStore any //obj_store.db
-	index    indexes.VectorIndex
-	logger   any
-	embedder any
-	wal      any
+	id        int
+	name      string
+	dataType  string
+	objStore  any //obj_store.db
+	index     indexes.VectorIndex
+	logger    any
+	embedder  any
+	filesPath string
+	wal       any
+	config    entities.Collection
 }
 
-func NewCollection(id int, cfg *models.Collection) (*Collection, error) {
+func NewCollection(id int, cfg *entities.Collection, filesPath string) (*Collection, error) {
 	c := Collection{
 		id:       id,
 		name:     cfg.Name,
 		dataType: cfg.DataType,
-		embedder: cfg.Embedder,
+		embedder: nil,
 		objStore: nil,
 		logger:   nil,
 		wal:      nil,
+		config:   *cfg,
 	}
 
-	switch cfg.IndexType { // cfg.IndexParams has already been validated
+	c.filesPath = fmt.Sprintf("%s/%s", filesPath, c.name)
+
+	switch cfg.IndexType { // TODO: should validate params when using vectory as embedded db
 	case entities.Hnsw:
 		var params entities.HnswParams
 
@@ -72,7 +77,7 @@ func (c *Collection) SemanticSearch(obj any, k int) {
 	// TODO: create embeddings from obj and get K-NN and then retrieve object ids from objStore
 }
 
-func (c *Collection) restore(col *ent.Collection, filesPath string) error {
+func (c *Collection) restore(col *ent.Collection) error {
 	c.id = col.ID
 	c.name = col.Name
 	c.dataType = col.DataType
@@ -86,4 +91,8 @@ func (c *Collection) restore(col *ent.Collection, filesPath string) error {
 	// restore wal
 
 	return nil
+}
+
+func (c *Collection) GetConfig() entities.Collection {
+	return c.config
 }

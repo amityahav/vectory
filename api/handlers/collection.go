@@ -3,6 +3,7 @@ package handlers
 import (
 	"Vectory/api/validators"
 	"Vectory/db"
+	"Vectory/entities"
 	"Vectory/gen/api/models"
 	"Vectory/gen/api/restapi/operations"
 	"Vectory/gen/api/restapi/operations/collection"
@@ -28,12 +29,14 @@ func (h *CollectionHandler) getCollection(params collection.GetCollectionParams)
 		return middleware.Error(http.StatusInternalServerError, handleError(err))
 	}
 
+	cfg := c.GetConfig()
+
 	col := models.Collection{
-		Name:        c.Name,
-		IndexType:   c.IndexType,
-		Embedder:    c.Embedder,
-		DataType:    c.DataType,
-		IndexParams: c.IndexParams,
+		Name:        cfg.Name,
+		IndexType:   cfg.IndexType,
+		Embedder:    cfg.Embedder,
+		DataType:    cfg.DataType,
+		IndexParams: cfg.IndexParams,
 	}
 
 	return collection.NewGetCollectionOK().WithPayload(&col)
@@ -47,12 +50,20 @@ func (h *CollectionHandler) addCollection(params collection.AddCollectionParams)
 		return middleware.Error(http.StatusBadRequest, handleError(err))
 	}
 
-	id, err := h.db.CreateCollection(ctx, params.Collection)
+	cfg := entities.Collection{
+		Name:        params.Collection.Name,
+		IndexType:   params.Collection.IndexType,
+		Embedder:    params.Collection.Embedder,
+		DataType:    params.Collection.DataType,
+		IndexParams: params.Collection.IndexParams,
+	}
+
+	_, err = h.db.CreateCollection(ctx, &cfg)
 	if err != nil {
 		return middleware.Error(http.StatusInternalServerError, handleError(err))
 	}
 
-	return collection.NewAddCollectionCreated().WithPayload(&models.CollectionCreated{CollectionID: int64(id)})
+	return collection.NewAddCollectionCreated().WithPayload(&models.CollectionCreated{CollectionName: cfg.Name})
 }
 
 func (h *CollectionHandler) deleteCollection(params collection.DeleteCollectionParams) middleware.Responder {

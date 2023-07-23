@@ -15,8 +15,8 @@ import (
 // swagger:model CollectionCreated
 type CollectionCreated struct {
 
-	// collection id
-	CollectionID int64 `json:"collection_id,omitempty"`
+	// collection name
+	CollectionName string `json:"collection_name,omitempty"`
 }
 
 // Validate validates this collection created

@@ -2,8 +2,7 @@ package db
 
 import (
 	"Vectory/db/metadata"
-	"Vectory/gen/api/models"
-	"Vectory/gen/ent"
+	"Vectory/entities"
 	"context"
 	"github.com/sirupsen/logrus"
 	"sync"
@@ -49,24 +48,24 @@ func Init(cfg *Config) (*DB, error) {
 }
 
 // CreateCollection creates a new collection in the database and cache it in memory
-func (db *DB) CreateCollection(ctx context.Context, cfg *models.Collection) (int, error) {
+func (db *DB) CreateCollection(ctx context.Context, cfg *entities.Collection) (*Collection, error) {
 	collectionID, err := db.metadataManager.CreateCollection(ctx, cfg)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	if _, ok := db.collections.Load(cfg.Name); ok { // for safety
-		return 0, ErrCollectionAlreadyExists
+		return nil, ErrCollectionAlreadyExists
 	}
 
-	c, err := NewCollection(collectionID, cfg)
+	c, err := NewCollection(collectionID, cfg, db.config.FilesPath)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	db.collections.Store(c.name, c)
 
-	return collectionID, nil
+	return c, nil
 }
 
 // DeleteCollection deletes collection both on disk and memory
@@ -82,8 +81,13 @@ func (db *DB) DeleteCollection(ctx context.Context, name string) error {
 }
 
 // GetCollection returns the collection with name
-func (db *DB) GetCollection(ctx context.Context, name string) (*ent.Collection, error) {
-	return db.metadataManager.GetCollection(ctx, name)
+func (db *DB) GetCollection(ctx context.Context, name string) (*Collection, error) {
+	c, ok := db.collections.Load(name)
+	if !ok {
+		return nil, ErrCollectionDoesntExist
+	}
+
+	return c.(*Collection), nil
 }
 
 // restore collections and metadata to memory
@@ -100,7 +104,7 @@ func (db *DB) restore() error {
 	for _, col := range cols {
 		nc := Collection{}
 
-		err = nc.restore(col, db.config.FilesPath)
+		err = nc.restore(col) // TODO: can be parallelized
 		if err != nil {
 			return err
 		}

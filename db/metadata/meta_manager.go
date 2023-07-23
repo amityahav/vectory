@@ -1,7 +1,7 @@
 package metadata
 
 import (
-	"Vectory/gen/api/models"
+	"Vectory/entities"
 	"Vectory/gen/ent"
 	"Vectory/gen/ent/collection"
 	"context"
@@ -10,6 +10,7 @@ import (
 	"os"
 )
 
+// MetaManager is responsible for managing all of Vectory's metadata about collections, etc..
 type MetaManager struct {
 	db        *ent.Client
 	filesPath string
@@ -34,7 +35,7 @@ func NewMetaManager(filesPath string) (*MetaManager, error) {
 	return &MetaManager{db: c, filesPath: filesPath}, nil
 }
 
-func (m *MetaManager) CreateCollection(ctx context.Context, cfg *models.Collection) (int, error) {
+func (m *MetaManager) CreateCollection(ctx context.Context, cfg *entities.Collection) (int, error) {
 	params := cfg.IndexParams.(map[string]interface{}) // TODO: change this
 
 	c, err := m.db.Collection.Create().
