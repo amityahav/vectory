@@ -1,12 +1,12 @@
 package handlers
 
 import (
-	"Vectory/api/validators"
 	"Vectory/db"
 	"Vectory/entities"
 	"Vectory/gen/api/models"
 	"Vectory/gen/api/restapi/operations"
 	"Vectory/gen/api/restapi/operations/collection"
+	"errors"
 	"github.com/go-openapi/runtime/middleware"
 	"net/http"
 )
@@ -26,7 +26,12 @@ func (h *CollectionHandler) getCollection(params collection.GetCollectionParams)
 
 	c, err := h.db.GetCollection(ctx, params.CollectionName)
 	if err != nil {
-		return middleware.Error(http.StatusInternalServerError, handleError(err))
+		code := http.StatusInternalServerError
+		if errors.Is(err, db.ErrValidationFailed) {
+			code = http.StatusBadRequest
+		}
+
+		return middleware.Error(code, handleError(err))
 	}
 
 	cfg := c.GetConfig()
@@ -45,11 +50,6 @@ func (h *CollectionHandler) getCollection(params collection.GetCollectionParams)
 func (h *CollectionHandler) addCollection(params collection.AddCollectionParams) middleware.Responder {
 	ctx := params.HTTPRequest.Context()
 
-	err := validators.ValidateCollection(params.Collection)
-	if err != nil {
-		return middleware.Error(http.StatusBadRequest, handleError(err))
-	}
-
 	cfg := entities.Collection{
 		Name:        params.Collection.Name,
 		IndexType:   params.Collection.IndexType,
@@ -58,9 +58,14 @@ func (h *CollectionHandler) addCollection(params collection.AddCollectionParams)
 		IndexParams: params.Collection.IndexParams,
 	}
 
-	_, err = h.db.CreateCollection(ctx, &cfg)
+	_, err := h.db.CreateCollection(ctx, &cfg)
 	if err != nil {
-		return middleware.Error(http.StatusInternalServerError, handleError(err))
+		code := http.StatusInternalServerError
+		if errors.Is(err, db.ErrValidationFailed) {
+			code = http.StatusBadRequest
+		}
+
+		return middleware.Error(code, handleError(err))
 	}
 
 	return collection.NewAddCollectionCreated().WithPayload(&models.CollectionCreated{CollectionName: cfg.Name})
@@ -71,7 +76,12 @@ func (h *CollectionHandler) deleteCollection(params collection.DeleteCollectionP
 
 	err := h.db.DeleteCollection(ctx, params.CollectionName)
 	if err != nil {
-		return middleware.Error(http.StatusInternalServerError, handleError(err))
+		code := http.StatusInternalServerError
+		if errors.Is(err, db.ErrValidationFailed) {
+			code = http.StatusBadRequest
+		}
+
+		return middleware.Error(code, handleError(err))
 	}
 
 	return collection.NewDeleteCollectionOK().WithPayload(&models.APIResponse{Message: "deleted successfully"})

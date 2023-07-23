@@ -2,37 +2,34 @@ package db
 
 import (
 	"Vectory/db/metadata"
+	"Vectory/db/validators"
 	"Vectory/entities"
 	"context"
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"sync"
 )
 
-type Config struct {
-	FilesPath  string `yaml:"files_path"`
-	ListenPort int    `yaml:"listen_port"`
-}
-
 type DB struct {
 	sync.RWMutex
-	config          *Config
 	metadataManager *metadata.MetaManager
 	collections     *sync.Map
 	logger          *logrus.Logger
+	filesPath       string
 	wal             any
 }
 
-// Init initialises Vectory and restore collections and additional metadata if exists
-func Init(cfg *Config) (*DB, error) {
+// Open initialises Vectory and restore collections and additional metadata if exists
+func Open(filesPath string) (*DB, error) {
 	db := DB{
-		config: cfg,
-		logger: logrus.New(),
-		wal:    nil,
+		logger:    logrus.New(),
+		filesPath: filesPath,
+		wal:       nil,
 	}
 
 	db.logger.SetFormatter(&logrus.JSONFormatter{})
 
-	mm, err := metadata.NewMetaManager(db.config.FilesPath)
+	mm, err := metadata.NewMetaManager(filesPath)
 	if err != nil {
 		return nil, err
 	}
@@ -49,16 +46,21 @@ func Init(cfg *Config) (*DB, error) {
 
 // CreateCollection creates a new collection in the database and cache it in memory
 func (db *DB) CreateCollection(ctx context.Context, cfg *entities.Collection) (*Collection, error) {
-	collectionID, err := db.metadataManager.CreateCollection(ctx, cfg)
+	err := validators.ValidateCollection(cfg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %s", ErrValidationFailed, err)
 	}
 
 	if _, ok := db.collections.Load(cfg.Name); ok { // for safety
 		return nil, ErrCollectionAlreadyExists
 	}
 
-	c, err := NewCollection(collectionID, cfg, db.config.FilesPath)
+	collectionID, err := db.metadataManager.CreateCollection(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := NewCollection(collectionID, cfg, db.filesPath)
 	if err != nil {
 		return nil, err
 	}
@@ -70,6 +72,10 @@ func (db *DB) CreateCollection(ctx context.Context, cfg *entities.Collection) (*
 
 // DeleteCollection deletes collection both on disk and memory
 func (db *DB) DeleteCollection(ctx context.Context, name string) error {
+	if _, ok := db.collections.Load(name); !ok {
+		return fmt.Errorf("%w: %s", ErrValidationFailed, ErrCollectionDoesntExist)
+	}
+
 	err := db.metadataManager.DeleteCollection(ctx, name)
 	if err != nil {
 		return err
@@ -84,7 +90,7 @@ func (db *DB) DeleteCollection(ctx context.Context, name string) error {
 func (db *DB) GetCollection(ctx context.Context, name string) (*Collection, error) {
 	c, ok := db.collections.Load(name)
 	if !ok {
-		return nil, ErrCollectionDoesntExist
+		return nil, fmt.Errorf("%w: %s", ErrValidationFailed, ErrCollectionDoesntExist)
 	}
 
 	return c.(*Collection), nil

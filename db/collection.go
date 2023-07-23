@@ -81,6 +81,13 @@ func (c *Collection) restore(col *ent.Collection) error {
 	c.id = col.ID
 	c.name = col.Name
 	c.dataType = col.DataType
+	c.config = entities.Collection{
+		Name:        col.Name,
+		IndexType:   col.IndexType,
+		Embedder:    col.Embedder,
+		DataType:    col.DataType,
+		IndexParams: col.IndexParams,
+	}
 
 	// restore index
 
