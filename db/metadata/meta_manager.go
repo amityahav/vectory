@@ -17,13 +17,13 @@ type MetaManager struct {
 }
 
 func NewMetaManager(filesPath string) (*MetaManager, error) {
+	if stat, err := os.Stat(filesPath); err != nil || !stat.IsDir() {
+		return nil, ErrPathNotDirectory
+	}
+
 	c, err := ent.Open("sqlite3", "file:"+filesPath+"/metadata.db")
 	if err != nil {
 		return nil, err
-	}
-
-	if stat, err := os.Stat(filesPath); err != nil || !stat.IsDir() {
-		return nil, ErrPathNotDirectory
 	}
 
 	// schemas auto migration

@@ -22,11 +22,11 @@ type Hnsw struct {
 	efConstruction   int
 	ef               int
 	mL               float64
-	entrypointID     int64
+	entrypointID     uint64
 	currentMaxLayer  int64
-	nodes            map[int64]*Vertex
+	nodes            map[uint64]*Vertex
 	distFunc         func([]float32, []float32) float32
-	selectNeighbors  func(*Vertex, []utils.Element, int) []int64
+	selectNeighbors  func(*Vertex, []utils.Element, int) []uint64
 	initialInsertion *sync.Once
 	curId            int64
 }
@@ -37,7 +37,7 @@ func NewHnsw(params entities.HnswParams) *Hnsw {
 		mMax:             params.MMax,
 		ef:               params.Ef,
 		efConstruction:   params.EfConstruction,
-		nodes:            make(map[int64]*Vertex), // TODO: change to an array
+		nodes:            make(map[uint64]*Vertex), // TODO: change to an array
 		initialInsertion: &sync.Once{},
 	}
 
@@ -96,11 +96,11 @@ func (h *Hnsw) Search(q []float32, k int) []utils.Element {
 	return res
 }
 
-func (h *Hnsw) Delete(objId int64) bool {
+func (h *Hnsw) Delete(vectorId int64) bool {
 	panic("implement me")
 }
 
-func (h *Hnsw) Insert(vector []float32, vectorId int64, objId uint64) error {
+func (h *Hnsw) Insert(vector []float32, vectorId uint64) error {
 	var (
 		first bool
 		err   error
@@ -112,7 +112,6 @@ func (h *Hnsw) Insert(vector []float32, vectorId int64, objId uint64) error {
 	v := Vertex{
 		id:     vectorId,
 		vector: vector,
-		objId:  objId,
 	}
 
 	h.initialInsertion.Do(func() {
@@ -220,7 +219,7 @@ func (h *Hnsw) Insert(vector []float32, vectorId int64, objId uint64) error {
 }
 
 func (h *Hnsw) searchLayer(v *Vertex, eps []utils.Element, ef int, level int64) []utils.Element {
-	visited := NewSet[int64]()
+	visited := NewSet[uint64]()
 	for _, e := range eps {
 		visited.Add(e.Id)
 	}
@@ -240,7 +239,7 @@ func (h *Hnsw) searchLayer(v *Vertex, eps []utils.Element, ef int, level int64) 
 		cVertex := h.nodes[c.Id]
 		h.RUnlock()
 
-		connections := make([]int64, h.mMax0) // reused for all candidates
+		connections := make([]uint64, h.mMax0) // reused for all candidates
 
 		cVertex.Lock()
 		connections = connections[:len(cVertex.GetConnections(level))]
@@ -277,12 +276,12 @@ func (h *Hnsw) searchLayer(v *Vertex, eps []utils.Element, ef int, level int64) 
 	return nearestNeighbors.Elements
 }
 
-func (h *Hnsw) selectNeighborsHeuristic(v *Vertex, candidates []utils.Element, m int) []int64 {
-	result := make([]int64, 0, m)
+func (h *Hnsw) selectNeighborsHeuristic(v *Vertex, candidates []utils.Element, m int) []uint64 {
+	result := make([]uint64, 0, m)
 
 	workingQ := utils.NewMinHeapFromSliceDeep(candidates, cap(candidates))
 
-	visited := NewSet[int64]()
+	visited := NewSet[uint64]()
 	for _, c := range candidates {
 		visited.Add(c.Id)
 	}
@@ -354,14 +353,14 @@ func (h *Hnsw) selectNeighborsHeuristic(v *Vertex, candidates []utils.Element, m
 	return result
 }
 
-func (h *Hnsw) selectNeighborsSimple(_ *Vertex, candidates []utils.Element, m int) []int64 {
+func (h *Hnsw) selectNeighborsSimple(_ *Vertex, candidates []utils.Element, m int) []uint64 {
 	size := m
 	if len(candidates) < size {
 		size = len(candidates)
 	}
 
 	minHeap := utils.NewMinHeapFromSliceDeep(candidates, cap(candidates))
-	neighbors := make([]int64, 0, size)
+	neighbors := make([]uint64, 0, size)
 
 	for i := 0; i < size; i++ {
 		neighbors = append(neighbors, heap.Pop(minHeap).(utils.Element).Id)

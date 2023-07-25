@@ -3,8 +3,7 @@ package utils
 import "container/heap"
 
 type Element struct {
-	Id       int64
-	ObjId    uint64
+	Id       uint64
 	Distance float32
 }
 

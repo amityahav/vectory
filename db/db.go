@@ -72,6 +72,7 @@ func (db *DB) CreateCollection(ctx context.Context, cfg *entities.Collection) (*
 
 // DeleteCollection deletes collection both on disk and memory
 func (db *DB) DeleteCollection(ctx context.Context, name string) error {
+	// TODO: handle case where deleting and another user has ref to the collection trying accessing removed files
 	if _, ok := db.collections.Load(name); !ok {
 		return fmt.Errorf("%w: %s", ErrValidationFailed, ErrCollectionDoesntExist)
 	}

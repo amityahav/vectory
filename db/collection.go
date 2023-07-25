@@ -3,6 +3,7 @@ package db
 import (
 	"Vectory/db/core/indexes"
 	"Vectory/db/core/indexes/hnsw"
+	"Vectory/db/core/objstore"
 	"Vectory/entities"
 	"Vectory/gen/ent"
 	"encoding/json"
@@ -15,8 +16,9 @@ type Collection struct {
 	id        int
 	name      string
 	dataType  string
-	objStore  any //obj_store.db
+	objStore  *objstore.ObjectStore //obj_store.db
 	index     indexes.VectorIndex
+	idCounter *IdCounter
 	logger    any
 	embedder  any
 	filesPath string
@@ -38,7 +40,7 @@ func NewCollection(id int, cfg *entities.Collection, filesPath string) (*Collect
 
 	c.filesPath = fmt.Sprintf("%s/%s", filesPath, c.name)
 
-	switch cfg.IndexType { // TODO: should validate params when using vectory as embedded db
+	switch cfg.IndexType {
 	case entities.Hnsw:
 		var params entities.HnswParams
 
@@ -53,12 +55,25 @@ func NewCollection(id int, cfg *entities.Collection, filesPath string) (*Collect
 	return &c, nil
 }
 
-func (c *Collection) Insert(obj any) {
-	// TODO: store obj, create embedding and store objId and vector in index
+func (c *Collection) Insert(obj *objstore.Object) error {
+	// TODO: validate obj data type is the same as collection's
+	id, err := c.idCounter.FetchAndInc()
+	if err != nil {
+		return err // TODO better error wrappings
+	}
+
+	// insert into object store
+	c.objStore.Put(id, obj)
+
+	// embed
+
+	// insert into vector index
+
+	return nil
 }
 
-func (c *Collection) InsertWithVector(obj any, vector []float32) {
-
+func (c *Collection) InsertWithVector(obj *objstore.Object, vector []float32) error {
+	return nil
 }
 
 func (c *Collection) Delete(objId uint32) {
