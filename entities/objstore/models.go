@@ -8,12 +8,13 @@ const (
 )
 
 type Object struct {
+	Id uint64
 	//DataType int // TODO: currently supports only text objects
 	Data string
 }
 
 func (o *Object) Serialize() []byte {
-	b := make([]byte, 4+len(o.Data)) // DataLen + Data
+	b := make([]byte, 4+len(o.Data)) // Id + DataLen + Data
 
 	var offset int
 

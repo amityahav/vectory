@@ -1,4 +1,4 @@
-package entities
+package collection
 
 type Collection struct {
 	// name

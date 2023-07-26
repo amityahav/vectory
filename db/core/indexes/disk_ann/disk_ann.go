@@ -1,14 +1,13 @@
 package disk_ann
 
 import (
-	"Vectory/db/core/indexes"
 	"Vectory/db/core/indexes/utils"
 	"fmt"
 	"sync"
 	"sync/atomic"
 )
 
-var _ indexes.VectorIndex = &DiskAnn{}
+//var _ indexes.VectorIndex = &DiskAnn{}
 
 type DiskAnn struct {
 	sync.RWMutex
@@ -27,7 +26,7 @@ type DiskAnn struct {
 	dim                  uint32
 	memoryIndexSizeLimit uint32
 
-	currId uint32
+	currId uint64
 }
 
 func NewDiskAnn() *DiskAnn {
@@ -47,7 +46,7 @@ func NewDiskAnn() *DiskAnn {
 func loadIndex(path string) {
 }
 
-func (da *DiskAnn) Insert(vector []float32, objId uint32) error {
+func (da *DiskAnn) Insert(vector []float32, objId uint64) error {
 	da.Lock()
 	if da.rwIndex.Size() == da.memoryIndexSizeLimit { // TODO: find a better way for this
 		da.rwIndex.ReadOnly()
@@ -64,7 +63,7 @@ func (da *DiskAnn) Insert(vector []float32, objId uint32) error {
 	}
 	da.Unlock()
 
-	nextId := atomic.AddUint32(&da.currId, 1)
+	nextId := atomic.AddUint64(&da.currId, 1)
 	currId := nextId - 1 // after atomically incrementing we are guaranteed to have unique incrementing ids
 
 	err := da.rwIndex.insert(vector, da.listSize, da.distanceThreshold, currId, objId)

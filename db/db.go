@@ -2,8 +2,7 @@ package db
 
 import (
 	"Vectory/db/metadata"
-	"Vectory/db/validators"
-	"Vectory/entities"
+	"Vectory/entities/collection"
 	"context"
 	"fmt"
 	"github.com/sirupsen/logrus"
@@ -45,8 +44,8 @@ func Open(filesPath string) (*DB, error) {
 }
 
 // CreateCollection creates a new collection in the database and cache it in memory
-func (db *DB) CreateCollection(ctx context.Context, cfg *entities.Collection) (*Collection, error) {
-	err := validators.ValidateCollection(cfg)
+func (db *DB) CreateCollection(ctx context.Context, cfg *collection.Collection) (*Collection, error) {
+	err := collection.Validate(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrValidationFailed, err)
 	}
@@ -60,7 +59,7 @@ func (db *DB) CreateCollection(ctx context.Context, cfg *entities.Collection) (*
 		return nil, err
 	}
 
-	c, err := NewCollection(collectionID, cfg, db.filesPath)
+	c, err := newCollection(collectionID, cfg, db.filesPath)
 	if err != nil {
 		return nil, err
 	}

@@ -5,6 +5,7 @@ import (
 	"Vectory/db/core/indexes/distance"
 	"Vectory/db/core/indexes/utils"
 	"Vectory/entities"
+	"Vectory/entities/collection"
 	"container/heap"
 	"fmt"
 	"math"
@@ -31,7 +32,7 @@ type Hnsw struct {
 	curId            int64
 }
 
-func NewHnsw(params entities.HnswParams) *Hnsw {
+func NewHnsw(params collection.HnswParams) *Hnsw {
 	h := Hnsw{
 		m:                params.M,
 		mMax:             params.MMax,

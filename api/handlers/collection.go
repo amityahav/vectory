@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"Vectory/db"
-	"Vectory/entities"
+	collectionent "Vectory/entities/collection"
 	"Vectory/gen/api/models"
 	"Vectory/gen/api/restapi/operations"
 	"Vectory/gen/api/restapi/operations/collection"
@@ -50,7 +50,7 @@ func (h *CollectionHandler) getCollection(params collection.GetCollectionParams)
 func (h *CollectionHandler) addCollection(params collection.AddCollectionParams) middleware.Responder {
 	ctx := params.HTTPRequest.Context()
 
-	cfg := entities.Collection{
+	cfg := collectionent.Collection{
 		Name:        params.Collection.Name,
 		IndexType:   params.Collection.IndexType,
 		Embedder:    params.Collection.Embedder,

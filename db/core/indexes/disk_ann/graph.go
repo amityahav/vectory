@@ -6,12 +6,12 @@ import (
 )
 
 type Graph struct {
-	vertices map[uint32]*Vertex
+	vertices map[uint64]*Vertex
 }
 
 func newGraph() *Graph {
 	g := Graph{
-		vertices: map[uint32]*Vertex{},
+		vertices: map[uint64]*Vertex{},
 	}
 
 	return &g
@@ -21,7 +21,7 @@ func (g *Graph) addVertex(v *Vertex) {
 	g.vertices[v.id] = v
 }
 
-func (g *Graph) serializeVertices(buff []byte, ids []uint32, maxDegree uint32) int {
+func (g *Graph) serializeVertices(buff []byte, ids []uint64, maxDegree uint32) int {
 	var offset int
 
 	for _, id := range ids {
@@ -33,12 +33,12 @@ func (g *Graph) serializeVertices(buff []byte, ids []uint32, maxDegree uint32) i
 	return offset
 }
 
-func (g *Graph) deserializeVertices(buff []byte, dim uint32, maxDegree uint32, numberOfVertices uint32, currId uint32) int {
+func (g *Graph) deserializeVertices(buff []byte, dim uint32, maxDegree uint32, numberOfVertices uint64, currId uint64) int {
 	var offset int
 
 	for i := 0; i < int(numberOfVertices); i++ {
 		v := Vertex{}
-		v.id = currId + uint32(i)
+		v.id = currId + uint64(i)
 		n := v.deserialize(buff[offset:], dim, maxDegree)
 		g.vertices[v.id] = &v
 
@@ -49,9 +49,9 @@ func (g *Graph) deserializeVertices(buff []byte, dim uint32, maxDegree uint32, n
 }
 
 type Vertex struct {
-	id        uint32
+	id        uint64
 	objId     uint32
-	neighbors []uint32
+	neighbors []uint64
 	vector    []float32
 }
 
@@ -68,8 +68,8 @@ func (v *Vertex) serialize(buff []byte, maxDegree uint32) int {
 	}
 
 	for _, n := range v.neighbors {
-		binary.LittleEndian.PutUint32(buff[offset:], n)
-		offset += 4
+		binary.LittleEndian.PutUint64(buff[offset:], n)
+		offset += 8
 	}
 
 	// TODO: zero padding (needed?)
@@ -100,7 +100,7 @@ func (v *Vertex) deserialize(buff []byte, dim uint32, maxDegree uint32) int {
 	var remainder int
 
 	for i := 0; i < int(maxDegree); i++ {
-		n := binary.LittleEndian.Uint32(buff[offset:])
+		n := binary.LittleEndian.Uint64(buff[offset:])
 		offset += 4
 
 		if n == 0 { // no more neighbors

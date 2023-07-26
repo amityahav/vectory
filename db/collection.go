@@ -5,6 +5,8 @@ import (
 	"Vectory/db/core/indexes/hnsw"
 	"Vectory/db/core/objstore"
 	"Vectory/entities"
+	"Vectory/entities/collection"
+	objstoreentities "Vectory/entities/objstore"
 	"Vectory/gen/ent"
 	"encoding/json"
 	"fmt"
@@ -23,16 +25,15 @@ type Collection struct {
 	embedder  any
 	filesPath string
 	wal       any
-	config    entities.Collection
+	config    collection.Collection
 }
 
-func NewCollection(id int, cfg *entities.Collection, filesPath string) (*Collection, error) {
+func newCollection(id int, cfg *collection.Collection, filesPath string) (*Collection, error) {
 	c := Collection{
 		id:       id,
 		name:     cfg.Name,
 		dataType: cfg.DataType,
 		embedder: nil,
-		objStore: nil,
 		logger:   nil,
 		wal:      nil,
 		config:   *cfg,
@@ -40,9 +41,23 @@ func NewCollection(id int, cfg *entities.Collection, filesPath string) (*Collect
 
 	c.filesPath = fmt.Sprintf("%s/%s", filesPath, c.name)
 
+	os, err := objstore.NewObjectStore(c.filesPath)
+	if err != nil {
+		return nil, err
+	}
+
+	c.objStore = os
+
+	counter, err := NewIdCounter(c.filesPath)
+	if err != nil {
+		return nil, err
+	}
+
+	c.idCounter = counter
+
 	switch cfg.IndexType {
 	case entities.Hnsw:
-		var params entities.HnswParams
+		var params collection.HnswParams
 
 		b, _ := json.Marshal(cfg.IndexParams)
 		_ = json.Unmarshal(b, &params)
@@ -55,37 +70,55 @@ func NewCollection(id int, cfg *entities.Collection, filesPath string) (*Collect
 	return &c, nil
 }
 
-func (c *Collection) Insert(obj *objstore.Object) error {
+func (c *Collection) Insert(obj *objstoreentities.Object) error {
 	// TODO: validate obj data type is the same as collection's
+
+	return nil
+}
+
+func (c *Collection) Update(obj *objstoreentities.Object) error {
+	// TODO: handle race conditions
+	return nil
+}
+
+func (c *Collection) InsertWithVector(obj *objstoreentities.Object, vector []float32) error {
 	id, err := c.idCounter.FetchAndInc()
 	if err != nil {
-		return err // TODO better error wrappings
+		return err
 	}
 
-	// insert into object store
-	c.objStore.Put(id, obj)
+	obj.Id = id
 
-	// embed
+	if err = c.objStore.Put(obj); err != nil {
+		return err
+	}
 
-	// insert into vector index
+	if err = c.index.Insert(vector, obj.Id); err != nil {
+		return err
+	}
+
+	// TODO: flush WALS
 
 	return nil
 }
 
-func (c *Collection) InsertWithVector(obj *objstore.Object, vector []float32) error {
-	return nil
-}
-
-func (c *Collection) Delete(objId uint32) {
+func (c *Collection) Delete(objId uint64) {
 	// TODO: delete in objStore and in index
 }
 
-func (c *Collection) Update(objId uint32) {
-	// TODO: delete both in index and objStore and create again
-}
-
-func (c *Collection) Get(objIds []uint32) {
+func (c *Collection) Get(objIds []uint64) ([]objstoreentities.Object, error) {
 	// TODO: get objects with objIds from objStore
+	objects := make([]objstoreentities.Object, 0, len(objIds))
+	for _, id := range objIds {
+		obj, err := c.objStore.Get(id)
+		if err != nil {
+			return nil, err // TODO: continue instead?
+		}
+
+		objects = append(objects, *obj)
+	}
+
+	return objects, nil
 }
 
 func (c *Collection) SemanticSearch(obj any, k int) {
@@ -96,7 +129,7 @@ func (c *Collection) restore(col *ent.Collection) error {
 	c.id = col.ID
 	c.name = col.Name
 	c.dataType = col.DataType
-	c.config = entities.Collection{
+	c.config = collection.Collection{
 		Name:        col.Name,
 		IndexType:   col.IndexType,
 		Embedder:    col.Embedder,
@@ -115,6 +148,6 @@ func (c *Collection) restore(col *ent.Collection) error {
 	return nil
 }
 
-func (c *Collection) GetConfig() entities.Collection {
+func (c *Collection) GetConfig() collection.Collection {
 	return c.config
 }

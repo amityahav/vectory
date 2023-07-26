@@ -1,4 +1,4 @@
-package validators
+package collection
 
 import (
 	"Vectory/entities"
@@ -6,7 +6,7 @@ import (
 	"errors"
 )
 
-func ValidateCollection(cfg *entities.Collection) error {
+func Validate(cfg *Collection) error {
 	if cfg.Name == "" {
 		return ErrCollectionNameEmpty
 	}
@@ -35,7 +35,7 @@ func ValidateCollection(cfg *entities.Collection) error {
 }
 
 func validateHnswParams(params interface{}) error {
-	var hnswParams entities.HnswParams
+	var hnswParams HnswParams
 
 	b, err := json.Marshal(params)
 	if err != nil {

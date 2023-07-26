@@ -101,7 +101,7 @@ func (d *dal) writeIndex(mi *MemoryIndex) error {
 	}
 
 	// writing vertices pages
-	sortedIds := make([]uint32, 0, len(mi.graph.vertices))
+	sortedIds := make([]uint64, 0, len(mi.graph.vertices))
 
 	for id := range mi.graph.vertices {
 		sortedIds = append(sortedIds, id)
@@ -158,9 +158,9 @@ func (d *dal) readIndex() (*MemoryIndex, error) {
 	mi.deserializeMetadata(p.data)
 
 	// reading vertices pages
-	numOfVerticesInPage := uint32(math.Floor(float64(pageSize / (4 * (1 + mi.dim + mi.maxDegree)))))
-	numOfFullPages := mi.size / numOfVerticesInPage
-	remainder := mi.size % numOfVerticesInPage
+	numOfVerticesInPage := uint64(math.Floor(float64(pageSize / (4 * (1 + mi.dim + mi.maxDegree)))))
+	numOfFullPages := uint64(mi.size) / numOfVerticesInPage
+	remainder := uint64(mi.size) % numOfVerticesInPage
 
 	currId := mi.firstId
 	for i := 1; i <= int(numOfFullPages); i++ {

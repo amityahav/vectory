@@ -1,10 +1,11 @@
 package metadata
 
 import (
-	"Vectory/entities"
+	collectionent "Vectory/entities/collection"
 	"Vectory/gen/ent"
 	"Vectory/gen/ent/collection"
 	"context"
+	"encoding/json"
 	"fmt"
 	_ "github.com/xiaoqidun/entps"
 	"os"
@@ -17,8 +18,9 @@ type MetaManager struct {
 }
 
 func NewMetaManager(filesPath string) (*MetaManager, error) {
-	if stat, err := os.Stat(filesPath); err != nil || !stat.IsDir() {
-		return nil, ErrPathNotDirectory
+	err := os.Mkdir(filesPath, 0750)
+	if err != nil && !os.IsExist(err) {
+		return nil, err
 	}
 
 	c, err := ent.Open("sqlite3", "file:"+filesPath+"/metadata.db")
@@ -35,8 +37,17 @@ func NewMetaManager(filesPath string) (*MetaManager, error) {
 	return &MetaManager{db: c, filesPath: filesPath}, nil
 }
 
-func (m *MetaManager) CreateCollection(ctx context.Context, cfg *entities.Collection) (int, error) {
-	params := cfg.IndexParams.(map[string]interface{}) // TODO: change this
+func (m *MetaManager) CreateCollection(ctx context.Context, cfg *collectionent.Collection) (int, error) {
+	b, err := json.Marshal(cfg.IndexParams)
+	if err != nil {
+		return 0, nil
+	}
+
+	var params map[string]interface{}
+	err = json.Unmarshal(b, &params)
+	if err != nil {
+		return 0, err
+	}
 
 	c, err := m.db.Collection.Create().
 		SetName(cfg.Name).

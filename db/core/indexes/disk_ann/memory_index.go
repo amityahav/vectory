@@ -15,7 +15,7 @@ type MemoryIndex struct {
 	initialInsertion  *sync.Once
 
 	// starting point
-	s uint32
+	s uint64
 
 	// vectors dimension
 	dim uint32
@@ -24,7 +24,7 @@ type MemoryIndex struct {
 	maxDegree uint32
 
 	// the first vertex id that was inserted into the size
-	firstId uint32
+	firstId uint64
 
 	readOnly     bool
 	size         uint32 // immutable size once the index is snapshot
@@ -32,7 +32,7 @@ type MemoryIndex struct {
 }
 
 func newMemoryIndex(distFunc func([]float32, []float32) float32,
-	deletedObjIds *sync.Map, firstId uint32, maxDegree uint32, dim uint32) *MemoryIndex {
+	deletedObjIds *sync.Map, firstId uint64, maxDegree uint32, dim uint32) *MemoryIndex {
 	mi := MemoryIndex{
 		graph:             newGraph(),
 		calculateDistance: distFunc,
@@ -56,10 +56,6 @@ func (mi *MemoryIndex) search(q []float32, k int, listSize int, onlySearch bool)
 		Distance: mi.calculateDistance(sVertex.vector, q),
 	}
 
-	if onlySearch {
-		e.ObjId = sVertex.objId
-	}
-
 	resultSet := utils.NewMinMaxHeapFromSlice([]utils.Element{e})
 	visited := map[uint32]struct{}{}
 
@@ -74,7 +70,7 @@ func (mi *MemoryIndex) search(q []float32, k int, listSize int, onlySearch bool)
 
 		visited[uint32(min.Id)] = struct{}{}
 
-		minVertex := mi.graph.vertices[uint32(min.Id)]
+		minVertex := mi.graph.vertices[min.Id]
 
 		// add non-deleted vertices to the result
 		if _, ok := mi.deletedObjIds.Load(minVertex.objId); !ok {
@@ -87,10 +83,6 @@ func (mi *MemoryIndex) search(q []float32, k int, listSize int, onlySearch bool)
 			e = utils.Element{
 				Id:       n,
 				Distance: mi.calculateDistance(nVertex.vector, q),
-			}
-
-			if onlySearch {
-				e.ObjId = nVertex.objId
 			}
 
 			utils.Push(resultSet, e)
@@ -116,7 +108,7 @@ func (mi *MemoryIndex) search(q []float32, k int, listSize int, onlySearch bool)
 	return nil, candidatesVisited
 }
 
-func (mi *MemoryIndex) insert(v []float32, listSize int, distanceThreshold float32, currId, dataId uint32) error {
+func (mi *MemoryIndex) insert(v []float32, listSize int, distanceThreshold float32, currId, dataId uint64) error {
 	mi.Lock() // TODO: optimize locking
 	defer mi.Unlock()
 
@@ -129,8 +121,8 @@ func (mi *MemoryIndex) insert(v []float32, listSize int, distanceThreshold float
 	}
 
 	vertex := Vertex{
-		id:     currId,
-		objId:  dataId,
+		id: currId,
+		//objId:  dataId,
 		vector: v,
 	}
 
@@ -183,9 +175,9 @@ func (mi *MemoryIndex) delete(id uint32) error {
 	return nil
 }
 
-func (mi *MemoryIndex) robustPrune(v *Vertex, candidates []utils.Element, distanceThreshold float32) []uint32 {
+func (mi *MemoryIndex) robustPrune(v *Vertex, candidates []utils.Element, distanceThreshold float32) []uint64 {
 	// TODO locking
-	deletedCandidates := map[uint32]struct{}{v.id: {}} // excluding vertex v
+	deletedCandidates := map[uint64]struct{}{v.id: {}} // excluding vertex v
 
 	for _, n := range v.neighbors {
 		nVertex := mi.graph.vertices[n]
@@ -198,23 +190,23 @@ func (mi *MemoryIndex) robustPrune(v *Vertex, candidates []utils.Element, distan
 	}
 
 	candidatesHeap := utils.NewMinHeapFromSlice(candidates)
-	newNeighbors := make([]uint32, 0, mi.maxDegree)
+	newNeighbors := make([]uint64, 0, mi.maxDegree)
 
 	for candidatesHeap.Len() != 0 {
 		min := heap.Pop(candidatesHeap).(utils.Element)
-		if _, ok := deletedCandidates[uint32(min.Id)]; ok {
+		if _, ok := deletedCandidates[min.Id]; ok {
 			continue
 		}
 
-		newNeighbors = append(newNeighbors, uint32(min.Id))
+		newNeighbors = append(newNeighbors, min.Id)
 
 		if len(v.neighbors) == int(mi.maxDegree) {
 			break
 		}
 
 		for _, c := range candidatesHeap.Elements {
-			minVertex := mi.graph.vertices[uint32(min.Id)]
-			cVertex := mi.graph.vertices[uint32(c.Id)]
+			minVertex := mi.graph.vertices[min.Id]
+			cVertex := mi.graph.vertices[c.Id]
 
 			if distanceThreshold*mi.calculateDistance(minVertex.vector, cVertex.vector) <= c.Distance {
 				deletedCandidates[cVertex.id] = struct{}{}
@@ -257,14 +249,14 @@ func (mi *MemoryIndex) serializeMetadata(buff []byte) int {
 	binary.LittleEndian.PutUint32(buff[offset:], mi.maxDegree)
 	offset += 4
 
-	binary.LittleEndian.PutUint32(buff[offset:], mi.firstId)
-	offset += 4
+	binary.LittleEndian.PutUint64(buff[offset:], mi.firstId)
+	offset += 8
 
 	binary.LittleEndian.PutUint32(buff[offset:], mi.Size())
 	offset += 4
 
-	binary.LittleEndian.PutUint32(buff[offset:], mi.s)
-	offset += 4
+	binary.LittleEndian.PutUint64(buff[offset:], mi.s)
+	offset += 8
 
 	return offset
 }
@@ -278,14 +270,14 @@ func (mi *MemoryIndex) deserializeMetadata(buff []byte) int {
 	mi.maxDegree = binary.LittleEndian.Uint32(buff[offset:])
 	offset += 4
 
-	mi.firstId = binary.LittleEndian.Uint32(buff[offset:])
-	offset += 4
+	mi.firstId = binary.LittleEndian.Uint64(buff[offset:])
+	offset += 8
 
 	mi.size = binary.LittleEndian.Uint32(buff[offset:])
 	offset += 4
 
-	mi.s = binary.LittleEndian.Uint32(buff[offset:])
-	offset += 4
+	mi.s = binary.LittleEndian.Uint64(buff[offset:])
+	offset += 8
 
 	return offset
 }

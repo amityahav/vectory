@@ -16,7 +16,7 @@ import (
 )
 
 type job struct {
-	id     int64
+	id     uint64
 	vector []float32
 }
 
@@ -35,7 +35,7 @@ func TestHnsw(t *testing.T) {
 			log.Printf("%d", i)
 		}
 
-		err := hnsw.Insert(randomVector(dim), int64(i), 1)
+		err := hnsw.Insert(randomVector(dim), uint64(i))
 
 		if err != nil {
 			t.Error(err)
@@ -134,7 +134,7 @@ func buildIndexParallel(insertionChannel chan job) *Hnsw {
 					break
 				}
 
-				err := hnsw.Insert(job.vector, job.id, 1)
+				err := hnsw.Insert(job.vector, job.id)
 				if err != nil {
 					log.Fatal(err)
 					return
@@ -173,7 +173,7 @@ func loadSiftBaseVectors(path string, ch chan job) {
 		}
 
 		ch <- job{
-			id:     int64(i),
+			id:     uint64(i),
 			vector: vector,
 		}
 
@@ -215,7 +215,7 @@ func loadSiftQueryVectors(path string) [][]float32 {
 	return vectors
 }
 
-func loadSiftTruthVectors(path string) [][]int64 {
+func loadSiftTruthVectors(path string) [][]uint64 {
 	f, err := os.Open(path)
 	if err != nil {
 		log.Fatal(err)
@@ -224,7 +224,7 @@ func loadSiftTruthVectors(path string) [][]int64 {
 	buf := bufio2.NewReader(f)
 	b := make([]byte, 4)
 
-	vectors := make([][]int64, 100)
+	vectors := make([][]uint64, 100)
 
 	for i := 0; i < 100; i++ {
 		dim, err := readUint32(buf, b)
@@ -232,7 +232,7 @@ func loadSiftTruthVectors(path string) [][]int64 {
 			log.Fatal(err)
 		}
 
-		vectors[i] = make([]int64, dim)
+		vectors[i] = make([]uint64, dim)
 
 		for j := 0; j < int(dim); j++ {
 			fl32, err := readUint32(buf, b)
@@ -240,7 +240,7 @@ func loadSiftTruthVectors(path string) [][]int64 {
 				log.Fatal(err)
 			}
 
-			vectors[i][j] = int64(fl32)
+			vectors[i][j] = uint64(fl32)
 		}
 	}
 
@@ -272,7 +272,7 @@ func sequential(path string, ch chan job) {
 		}
 
 		ch <- job{
-			id:     int64(i),
+			id:     uint64(i),
 			vector: vector,
 		}
 	}
@@ -321,7 +321,7 @@ func concurrent() {
 				}
 
 				v := Vertex{
-					id:     int64(chunkNum*chunkSize + j),
+					id:     uint64(chunkNum*chunkSize + j),
 					vector: make([]float32, dim),
 				}
 
