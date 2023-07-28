@@ -7,7 +7,7 @@ type VectorIndex interface {
 	Insert(vector []float32, vectorId uint64) error
 
 	// Delete vertex corresponding with objId
-	Delete(vectorId int64) bool
+	Delete(id uint64) error
 
 	// Search for K-NN of vector
 	Search(q []float32, k int) []utils.Element

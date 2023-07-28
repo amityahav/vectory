@@ -30,9 +30,11 @@ type Hnsw struct {
 	selectNeighbors  func(*Vertex, []utils.Element, int) []uint64
 	initialInsertion *sync.Once
 	curId            int64
+	filesPath        string
+	wal              any
 }
 
-func NewHnsw(params collection.HnswParams) *Hnsw {
+func NewHnsw(params collection.HnswParams, filesPath string) *Hnsw {
 	h := Hnsw{
 		m:                params.M,
 		mMax:             params.MMax,
@@ -40,6 +42,7 @@ func NewHnsw(params collection.HnswParams) *Hnsw {
 		efConstruction:   params.EfConstruction,
 		nodes:            make(map[uint64]*Vertex), // TODO: change to an array
 		initialInsertion: &sync.Once{},
+		filesPath:        filesPath,
 	}
 
 	h.mMax0 = 2 * h.mMax
@@ -97,7 +100,7 @@ func (h *Hnsw) Search(q []float32, k int) []utils.Element {
 	return res
 }
 
-func (h *Hnsw) Delete(vectorId int64) bool {
+func (h *Hnsw) Delete(id uint64) error {
 	panic("implement me")
 }
 
@@ -391,4 +394,9 @@ func (h *Hnsw) isEmpty() bool {
 
 func (h *Hnsw) calculateLevelForVertex() int64 {
 	return int64(math.Floor(-math.Log(rand.Float64()) * h.mL))
+}
+
+// init builds index from wal if exists
+func (h *Hnsw) init() error {
+	return nil
 }

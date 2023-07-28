@@ -5,6 +5,7 @@ import (
 	"Vectory/entities/collection"
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"sync"
 )
@@ -18,26 +19,16 @@ type DB struct {
 	wal             any
 }
 
-// Open initialises Vectory and restore collections and additional metadata if exists
+// Open initialises Vectory and init collections and additional metadata if exists
 func Open(filesPath string) (*DB, error) {
 	db := DB{
 		logger:    logrus.New(),
 		filesPath: filesPath,
-		wal:       nil,
 	}
 
-	db.logger.SetFormatter(&logrus.JSONFormatter{})
-
-	mm, err := metadata.NewMetaManager(filesPath)
+	err := db.init()
 	if err != nil {
-		return nil, err
-	}
-
-	db.metadataManager = mm
-
-	err = db.restore()
-	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed opening vectory")
 	}
 
 	return &db, nil
@@ -96,9 +87,18 @@ func (db *DB) GetCollection(ctx context.Context, name string) (*Collection, erro
 	return c.(*Collection), nil
 }
 
-// restore collections and metadata to memory
-func (db *DB) restore() error {
+// init collections and metadata to memory
+func (db *DB) init() error {
 	ctx := context.Background()
+
+	db.logger.SetFormatter(&logrus.JSONFormatter{})
+
+	mm, err := metadata.NewMetaManager(db.filesPath)
+	if err != nil {
+		return err
+	}
+
+	db.metadataManager = mm
 
 	db.collections = &sync.Map{}
 
@@ -108,14 +108,19 @@ func (db *DB) restore() error {
 	}
 
 	for _, col := range cols {
-		nc := Collection{}
+		c, err := newCollection(col.ID, &collection.Collection{
+			Name:        col.Name,
+			IndexType:   col.IndexType,
+			Embedder:    col.Embedder,
+			DataType:    col.DataType,
+			IndexParams: col.IndexParams,
+		}, db.filesPath)
 
-		err = nc.restore(col) // TODO: can be parallelized
 		if err != nil {
 			return err
 		}
 
-		db.collections.Store(nc.name, nc)
+		db.collections.Store(c.name, c)
 	}
 
 	return nil

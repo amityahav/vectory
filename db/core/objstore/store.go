@@ -3,6 +3,7 @@ package objstore
 import (
 	"Vectory/entities/objstore"
 	"encoding/binary"
+	"errors"
 	"git.mills.io/prologic/bitcask"
 )
 
@@ -33,18 +34,29 @@ func (s *ObjectStore) Put(obj *objstore.Object) error {
 	return s.db.Put(idBytes, obj.Serialize())
 }
 
-func (s *ObjectStore) Get(id uint64) (*objstore.Object, error) {
+func (s *ObjectStore) Get(id uint64) (*objstore.Object, bool, error) {
 	idBytes := make([]byte, 8) // TODO: can be reused
 	binary.LittleEndian.PutUint64(idBytes, id)
 
 	res, err := s.db.Get(idBytes)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, bitcask.ErrKeyNotFound) {
+			return nil, false, nil
+		}
+
+		return nil, false, err
 	}
 
 	obj := objstore.Object{}
 	obj.Deserialize(res)
 	obj.Id = id
 
-	return &obj, nil
+	return &obj, true, nil
+}
+
+func (s *ObjectStore) Delete(id uint64) error {
+	idBytes := make([]byte, 8) // TODO: can be reused
+	binary.LittleEndian.PutUint64(idBytes, id)
+
+	return s.db.Delete(idBytes)
 }

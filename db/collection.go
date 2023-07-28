@@ -7,25 +7,25 @@ import (
 	"Vectory/entities"
 	"Vectory/entities/collection"
 	objstoreentities "Vectory/entities/objstore"
-	"Vectory/gen/ent"
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
 )
 
 var _ CRUD = &Collection{}
 
 type Collection struct {
-	id        int
-	name      string
-	dataType  string
-	objStore  *objstore.ObjectStore //obj_store.db
-	index     indexes.VectorIndex
-	idCounter *IdCounter
-	logger    any
-	embedder  any
-	filesPath string
-	wal       any
-	config    collection.Collection
+	id          int
+	name        string
+	dataType    string
+	objStore    *objstore.ObjectStore
+	vectorIndex indexes.VectorIndex
+	idCounter   *IdCounter
+	logger      any
+	embedder    any
+	filesPath   string
+	wal         any
+	config      collection.Collection
 }
 
 func newCollection(id int, cfg *collection.Collection, filesPath string) (*Collection, error) {
@@ -59,10 +59,10 @@ func newCollection(id int, cfg *collection.Collection, filesPath string) (*Colle
 	case entities.Hnsw:
 		var params collection.HnswParams
 
-		b, _ := json.Marshal(cfg.IndexParams)
+		b, _ := json.Marshal(cfg.IndexParams) // validated in wrapper functions
 		_ = json.Unmarshal(b, &params)
 
-		c.index = hnsw.NewHnsw(params)
+		c.vectorIndex = hnsw.NewHnsw(params, c.filesPath)
 	default:
 		return nil, ErrUnknownIndexType
 	}
@@ -93,26 +93,51 @@ func (c *Collection) InsertWithVector(obj *objstoreentities.Object, vector []flo
 		return err
 	}
 
-	if err = c.index.Insert(vector, obj.Id); err != nil {
+	if err = c.vectorIndex.Insert(vector, obj.Id); err != nil {
 		return err
 	}
 
-	// TODO: flush WALS
+	// TODO: flush hnsw wal
 
 	return nil
 }
 
-func (c *Collection) Delete(objId uint64) {
+func (c *Collection) Delete(objId uint64) error {
 	// TODO: delete in objStore and in index
+	_, found, err := c.objStore.Get(objId)
+	if err != nil {
+		return errors.Wrapf(err, "failed getting %d from object store", objId)
+	}
+
+	if !found {
+		// nothing to do
+		return nil
+	}
+
+	err = c.objStore.Delete(objId)
+	if err != nil {
+		return errors.Wrapf(err, "failed deleting %d from object store", objId)
+	}
+
+	err = c.vectorIndex.Delete(objId)
+	if err != nil {
+		return errors.Wrapf(err, "failed deleting %d from vector index", objId)
+	}
+
+	// TODO: flush hnsw wal
+	return nil
 }
 
 func (c *Collection) Get(objIds []uint64) ([]objstoreentities.Object, error) {
-	// TODO: get objects with objIds from objStore
 	objects := make([]objstoreentities.Object, 0, len(objIds))
 	for _, id := range objIds {
-		obj, err := c.objStore.Get(id)
+		obj, found, err := c.objStore.Get(id)
 		if err != nil {
-			return nil, err // TODO: continue instead?
+			return nil, errors.Wrapf(err, "failed getting %d from object store", id)
+		}
+
+		if !found {
+			continue
 		}
 
 		objects = append(objects, *obj)
@@ -123,29 +148,6 @@ func (c *Collection) Get(objIds []uint64) ([]objstoreentities.Object, error) {
 
 func (c *Collection) SemanticSearch(obj any, k int) {
 	// TODO: create embeddings from obj and get K-NN and then retrieve object ids from objStore
-}
-
-func (c *Collection) restore(col *ent.Collection) error {
-	c.id = col.ID
-	c.name = col.Name
-	c.dataType = col.DataType
-	c.config = collection.Collection{
-		Name:        col.Name,
-		IndexType:   col.IndexType,
-		Embedder:    col.Embedder,
-		DataType:    col.DataType,
-		IndexParams: col.IndexParams,
-	}
-
-	// restore index
-
-	// restore objStore
-
-	// restore embedder
-
-	// restore wal
-
-	return nil
 }
 
 func (c *Collection) GetConfig() collection.Collection {

@@ -26,7 +26,7 @@ func NewIdCounter(filesPath string) (*IdCounter, error) {
 	}
 
 	var counter uint64
-	if stat.Size() > 0 {
+	if stat.Size() > 0 { // file already exists
 		if err = binary.Read(file, binary.LittleEndian, &counter); err != nil {
 			return nil, err
 		}
