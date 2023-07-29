@@ -39,10 +39,11 @@ func TestCollection(t *testing.T) {
 	t.Run("insertion with vectors", func(t *testing.T) {
 		for i := 0; i < 1000; i++ {
 			o := objstore.Object{
-				Data: fmt.Sprintf("%d", i),
+				Data:   fmt.Sprintf("%d", i),
+				Vector: randomVector(128),
 			}
 
-			err = c.InsertWithVector(&o, randomVector(128))
+			err = c.Insert(&o)
 			require.NoError(t, err)
 
 			o.Id = uint64(i)

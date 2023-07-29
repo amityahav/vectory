@@ -10,7 +10,8 @@ const (
 type Object struct {
 	Id uint64
 	//DataType int // TODO: currently supports only text objects
-	Data string
+	Data   string
+	Vector []float32
 }
 
 func (o *Object) Serialize() []byte {

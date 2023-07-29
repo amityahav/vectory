@@ -72,16 +72,10 @@ func newCollection(id int, cfg *collection.Collection, filesPath string) (*Colle
 
 func (c *Collection) Insert(obj *objstoreentities.Object) error {
 	// TODO: validate obj data type is the same as collection's
+	if obj.Vector == nil {
+		// TODO: create embedding and store in obj
+	}
 
-	return nil
-}
-
-func (c *Collection) Update(obj *objstoreentities.Object) error {
-	// TODO: handle race conditions
-	return nil
-}
-
-func (c *Collection) InsertWithVector(obj *objstoreentities.Object, vector []float32) error {
 	id, err := c.idCounter.FetchAndInc()
 	if err != nil {
 		return err
@@ -93,12 +87,17 @@ func (c *Collection) InsertWithVector(obj *objstoreentities.Object, vector []flo
 		return err
 	}
 
-	if err = c.vectorIndex.Insert(vector, obj.Id); err != nil {
+	if err = c.vectorIndex.Insert(obj.Vector, obj.Id); err != nil {
 		return err
 	}
 
 	// TODO: flush hnsw wal
 
+	return nil
+}
+
+func (c *Collection) Update(obj *objstoreentities.Object) error {
+	// TODO: handle race conditions
 	return nil
 }
 
