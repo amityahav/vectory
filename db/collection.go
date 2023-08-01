@@ -62,7 +62,12 @@ func newCollection(id int, cfg *collection.Collection, filesPath string) (*Colle
 		b, _ := json.Marshal(cfg.IndexParams) // validated in wrapper functions
 		_ = json.Unmarshal(b, &params)
 
-		c.vectorIndex = hnsw.NewHnsw(params, c.filesPath)
+		index, err := hnsw.NewHnsw(params, c.filesPath)
+		if err != nil {
+			return nil, err
+		}
+
+		c.vectorIndex = index
 	default:
 		return nil, ErrUnknownIndexType
 	}
