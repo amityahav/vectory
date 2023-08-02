@@ -10,7 +10,7 @@ const (
 	AddVertex byte = iota
 	SetEntryPointWithMaxLayer
 	SetConnectionsAtLevel
-	SetConnectionAtLevel
+	addConnectionAtLevel
 )
 
 type wal struct {
@@ -92,14 +92,14 @@ func (w *wal) setConnectionsAtLevel(id uint64, level int, neighbors []uint64) er
 	return err
 }
 
-func (w *wal) setConnectionAtLevel(id uint64, level int, n uint64) error {
+func (w *wal) addConnectionAtLevel(id uint64, level int, n uint64) error {
 	/*
 		bytes = [opcode, id, level, nid], len(bytes) = 1 + 8 + 4 + 8
 	*/
 
 	bytes := make([]byte, 21)
 
-	bytes[0] = SetConnectionAtLevel
+	bytes[0] = addConnectionAtLevel
 	binary.LittleEndian.PutUint64(bytes[1:9], id)
 	binary.LittleEndian.PutUint32(bytes[9:13], uint32(level))
 	binary.LittleEndian.PutUint64(bytes[13:18], n)

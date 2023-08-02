@@ -91,7 +91,7 @@ func (h *Hnsw) Insert(vector []float32, vectorId uint64) error {
 			connections := nVertex.GetConnections(l)
 
 			if len(connections) < maxConn {
-				if err = h.wal.setConnectionAtLevel(n, int(l), v.id); err != nil {
+				if err = h.wal.addConnectionAtLevel(n, int(l), v.id); err != nil {
 					return err
 				}
 
