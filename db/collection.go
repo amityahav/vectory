@@ -97,6 +97,9 @@ func (c *Collection) Insert(obj *objstoreentities.Object) error {
 	}
 
 	// TODO: flush hnsw wal
+	if err = c.vectorIndex.Flush(); err != nil {
+		return err
+	}
 
 	return nil
 }

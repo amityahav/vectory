@@ -11,6 +11,9 @@ type VectorIndex interface {
 
 	// Search for K-NN of vector
 	Search(q []float32, k int) []utils.Element
+
+	// Flush wal to disk
+	Flush() error
 }
 
 func NewVectorIndex() {

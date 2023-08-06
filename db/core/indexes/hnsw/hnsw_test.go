@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"math"
-	"math/rand"
 	"os"
 	"runtime"
 	"sync"
@@ -44,16 +43,6 @@ func TestHnsw(t *testing.T) {
 
 	_ = hnsw.Search(randomVector(dim), 10)
 
-}
-
-func randomVector(dim int) []float32 {
-	vec := make([]float32, dim)
-
-	for i := range vec {
-		vec[i] = rand.Float32()
-	}
-
-	return vec
 }
 
 func TestSift(t *testing.T) {

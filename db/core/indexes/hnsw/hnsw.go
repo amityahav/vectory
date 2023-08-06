@@ -73,6 +73,10 @@ func NewHnsw(params collection.HnswParams, filesPath string) (*Hnsw, error) {
 	return &h, nil
 }
 
+func (h *Hnsw) Flush() error {
+	return h.wal.flush()
+}
+
 func (h *Hnsw) calculateDistance(v1, v2 []float32) float32 {
 	return h.distFunc(v1, v2)
 }

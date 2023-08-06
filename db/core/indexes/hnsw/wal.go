@@ -37,6 +37,10 @@ func (w *wal) walReader() *w.Reader {
 	return w.f.NewReader()
 }
 
+func (w *wal) flush() error {
+	return w.f.Sync()
+}
+
 func (w *wal) addVertex(v *Vertex) error {
 	/*
 		bytes = [opcode, v.id, level], len(bytes) = 1 + 8 + 4
@@ -46,7 +50,7 @@ func (w *wal) addVertex(v *Vertex) error {
 
 	bytes[0] = AddVertex
 	binary.LittleEndian.PutUint64(bytes[1:9], v.id)
-	binary.LittleEndian.PutUint32(bytes[9:13], uint32(level))
+	binary.LittleEndian.PutUint32(bytes[9:], uint32(level))
 
 	_, err := w.f.Write(bytes)
 
@@ -62,7 +66,7 @@ func (w *wal) setEntryPointWithMaxLayer(id uint64, level int) error {
 
 	bytes[0] = SetEntryPointWithMaxLayer
 	binary.LittleEndian.PutUint64(bytes[1:9], id)
-	binary.LittleEndian.PutUint32(bytes[9:13], uint32(level))
+	binary.LittleEndian.PutUint32(bytes[9:], uint32(level))
 
 	_, err := w.f.Write(bytes)
 
@@ -71,10 +75,10 @@ func (w *wal) setEntryPointWithMaxLayer(id uint64, level int) error {
 
 func (w *wal) setConnectionsAtLevel(id uint64, level int, neighbors []uint64) error {
 	/*
-		bytes = [opcode, id, level, len(neighbors), neighbors], len(bytes) = 1 + 8 + 4 + 4 + 4*len(neighbors)
+		bytes = [opcode, id, level, len(neighbors), neighbors], len(bytes) = 1 + 8 + 4 + 4 + 8*len(neighbors)
 	*/
 
-	bytes := make([]byte, 17+4*len(neighbors))
+	bytes := make([]byte, 17+8*len(neighbors))
 
 	bytes[0] = SetConnectionsAtLevel
 	binary.LittleEndian.PutUint64(bytes[1:9], id)
@@ -84,7 +88,7 @@ func (w *wal) setConnectionsAtLevel(id uint64, level int, neighbors []uint64) er
 	offset := 17
 	for _, n := range neighbors {
 		binary.LittleEndian.PutUint64(bytes[offset:], n)
-		offset += 4
+		offset += 8
 	}
 
 	_, err := w.f.Write(bytes)
@@ -102,7 +106,7 @@ func (w *wal) addConnectionAtLevel(id uint64, level int, n uint64) error {
 	bytes[0] = addConnectionAtLevel
 	binary.LittleEndian.PutUint64(bytes[1:9], id)
 	binary.LittleEndian.PutUint32(bytes[9:13], uint32(level))
-	binary.LittleEndian.PutUint64(bytes[13:18], n)
+	binary.LittleEndian.PutUint64(bytes[13:], n)
 
 	_, err := w.f.Write(bytes)
 
