@@ -1,12 +1,14 @@
 package hnsw
 
 import (
+	"Vectory/db/core/objstore"
+	"Vectory/entities/collection"
+	objstoreentities "Vectory/entities/objstore"
 	bufio2 "bufio"
-	"encoding/binary"
+	"fmt"
 	"github.com/pkg/profile"
-	"io"
+	"github.com/stretchr/testify/require"
 	"log"
-	"math"
 	"os"
 	"runtime"
 	"sync"
@@ -14,35 +16,90 @@ import (
 	"time"
 )
 
-type job struct {
-	id     uint64
-	vector []float32
+func BenchmarkInsertion(b *testing.B) {
+	b.ResetTimer()
+	b.ReportAllocs()
+	//defer profile.Start(profile.CPUProfile, profile.ProfilePath("./profile")).Stop()
+	filesPath := "./tmp"
+
+	for i := 0; i < b.N; i++ {
+		hnsw, _ := newHnsw(filesPath)
+		size := 100000
+		dim := 128
+		ch := make(chan job, size)
+		for i := 0; i < size; i++ {
+			j := job{
+				id:     uint64(i),
+				vector: randomVector(dim),
+			}
+
+			ch <- j
+		}
+		start := time.Now()
+
+		wg := sync.WaitGroup{}
+		go insertInParallel(ch, hnsw, &wg)
+		wg.Wait()
+
+		end := time.Since(start)
+		fmt.Printf("insertion took: %s\n", end)
+
+		os.RemoveAll(filesPath)
+	}
+	//_ = hnsw.Search(randomVector(dim), 10)
 }
 
-func newHnsw() *Hnsw {
-	return nil
-}
+func TestRestoreFromDisk(t *testing.T) {
+	filesPath := "./tmp"
+	defer os.RemoveAll(filesPath)
 
-func TestHnsw(t *testing.T) {
-	defer profile.Start(profile.CPUProfile, profile.ProfilePath("./profile")).Stop()
+	store, err := objstore.NewObjectStore(filesPath)
+	require.NoError(t, err)
 
-	hnsw := newHnsw()
 	dim := 128
+	h, err := NewHnsw(collection.HnswParams{
+		M:              64,
+		MMax:           128,
+		EfConstruction: 100,
+		Ef:             100,
+		Heuristic:      true,
+		DistanceType:   "dot_product",
+	}, filesPath, store)
 
-	for i := 0; i < 10000; i++ {
-		if i%1000 == 0 {
-			log.Printf("%d", i)
+	require.NoError(t, err)
+
+	for i := 0; i < 2000; i++ {
+		vec := randomVector(dim)
+		o := objstoreentities.Object{
+			Id:     uint64(i),
+			Data:   "",
+			Vector: vec,
 		}
 
-		err := hnsw.Insert(randomVector(dim), uint64(i))
-
-		if err != nil {
-			t.Error(err)
-		}
+		require.NoError(t, h.Insert(vec, uint64(i)))
+		require.NoError(t, store.Put(&o))
 	}
 
-	_ = hnsw.Search(randomVector(dim), 10)
+	// create new hnsw and restore from wal
+	start := time.Now()
+	hRestored, err := NewHnsw(collection.HnswParams{
+		M:              64,
+		MMax:           128,
+		EfConstruction: 100,
+		Ef:             100,
+		Heuristic:      true,
+		DistanceType:   "dot_product",
+	}, filesPath, store)
+	require.NoError(t, err)
 
+	end := time.Since(start)
+
+	fmt.Printf("reloading from disk took: %s", end)
+
+	// compare old hnsw with restored hnsw
+	require.Equal(t, h.entrypointID, hRestored.entrypointID)
+	require.Equal(t, h.currentMaxLayer, hRestored.currentMaxLayer)
+	require.Equal(t, h.nodes, hRestored.nodes)
 }
 
 func TestSift(t *testing.T) {
@@ -88,152 +145,6 @@ func TestSift(t *testing.T) {
 	avgRecall /= float32(k * len(queryVectors))
 
 	log.Printf("avg recall: %f", avgRecall)
-}
-
-//
-//func buildIndexSequential(vertices []*Vertex) *Hnsw {
-//	hnsw := newHnsw()
-//
-//	for i, v := range vertices {
-//		err := hnsw.Insert(v)
-//		if err != nil {
-//			log.Printf("failed inserting V#%d. err: %s", v.id, err.Error())
-//		}
-//
-//		if i%1000 == 0 {
-//			log.Printf("Inserted %d vertices", i)
-//		}
-//	}
-//
-//	return hnsw
-//}
-
-func buildIndexParallel(insertionChannel chan job) *Hnsw {
-	hnsw := newHnsw()
-	var wg sync.WaitGroup
-
-	for i := 0; i < runtime.NumCPU(); i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			for {
-				job, ok := <-insertionChannel
-				if !ok {
-					break
-				}
-
-				err := hnsw.Insert(job.vector, job.id)
-				if err != nil {
-					log.Fatal(err)
-					return
-				}
-			}
-		}()
-	}
-
-	wg.Wait()
-
-	return hnsw
-}
-
-func loadSiftBaseVectors(path string, ch chan job) {
-	f, err := os.Open(path)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	buf := bufio2.NewReader(f)
-	b := make([]byte, 4)
-
-	for i := 0; i < 10000; i++ {
-		dim, err := readUint32(buf, b)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		vector := make([]float32, dim)
-
-		for j := 0; j < int(dim); j++ {
-			vector[j], err = readFloat32(buf, b)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-
-		ch <- job{
-			id:     uint64(i),
-			vector: vector,
-		}
-
-		if i%1000 == 0 {
-			log.Printf("inserted %d", i)
-		}
-	}
-
-	close(ch)
-}
-
-func loadSiftQueryVectors(path string) [][]float32 {
-	f, err := os.Open(path)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	buf := bufio2.NewReader(f)
-	b := make([]byte, 4)
-
-	vectors := make([][]float32, 100)
-
-	for i := 0; i < 100; i++ {
-		dim, err := readUint32(buf, b)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		vectors[i] = make([]float32, dim)
-
-		for j := 0; j < int(dim); j++ {
-			vectors[i][j], err = readFloat32(buf, b)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-	}
-
-	return vectors
-}
-
-func loadSiftTruthVectors(path string) [][]uint64 {
-	f, err := os.Open(path)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	buf := bufio2.NewReader(f)
-	b := make([]byte, 4)
-
-	vectors := make([][]uint64, 100)
-
-	for i := 0; i < 100; i++ {
-		dim, err := readUint32(buf, b)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		vectors[i] = make([]uint64, dim)
-
-		for j := 0; j < int(dim); j++ {
-			fl32, err := readUint32(buf, b)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			vectors[i][j] = uint64(fl32)
-		}
-	}
-
-	return vectors
 }
 
 func sequential(path string, ch chan job) {
@@ -334,22 +245,4 @@ func concurrent() {
 	for v := range insertionChannel {
 		log.Printf("Loaded V#%d", v.id)
 	}
-}
-
-func readUint32(f io.Reader, b []byte) (uint32, error) {
-	_, err := f.Read(b)
-	if err != nil {
-		return 0, err
-	}
-
-	return binary.LittleEndian.Uint32(b), nil
-}
-
-func readFloat32(f io.Reader, b []byte) (float32, error) {
-	_, err := f.Read(b)
-	if err != nil {
-		return 0, err
-	}
-
-	return math.Float32frombits(binary.LittleEndian.Uint32(b)), nil
 }

@@ -42,7 +42,7 @@ func (h *Hnsw) Search(q []float32, k int) []utils.Element {
 }
 
 func (h *Hnsw) searchLayer(v *Vertex, eps []utils.Element, ef int, level int64) []utils.Element {
-	visited := NewSet[uint64]()
+	visited := newSet[uint64]()
 	for _, e := range eps {
 		visited.Add(e.Id)
 	}

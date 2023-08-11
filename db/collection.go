@@ -62,7 +62,7 @@ func newCollection(id int, cfg *collection.Collection, filesPath string) (*Colle
 		b, _ := json.Marshal(cfg.IndexParams) // validated in wrapper functions
 		_ = json.Unmarshal(b, &params)
 
-		index, err := hnsw.NewHnsw(params, c.filesPath)
+		index, err := hnsw.NewHnsw(params, c.filesPath, os)
 		if err != nil {
 			return nil, err
 		}
@@ -96,11 +96,6 @@ func (c *Collection) Insert(obj *objstoreentities.Object) error {
 		return err
 	}
 
-	// TODO: flush hnsw wal
-	if err = c.vectorIndex.Flush(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -131,7 +126,6 @@ func (c *Collection) Delete(objId uint64) error {
 		return errors.Wrapf(err, "failed deleting %d from vector index", objId)
 	}
 
-	// TODO: flush hnsw wal
 	return nil
 }
 
@@ -153,7 +147,7 @@ func (c *Collection) Get(objIds []uint64) ([]objstoreentities.Object, error) {
 	return objects, nil
 }
 
-func (c *Collection) SemanticSearch(obj any, k int) {
+func (c *Collection) SemanticSearch(obj *objstoreentities.Object, k int) {
 	// TODO: create embeddings from obj and get K-NN and then retrieve object ids from objStore
 }
 

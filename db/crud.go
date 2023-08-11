@@ -7,5 +7,5 @@ type CRUD interface {
 	Update(obj *objstore.Object) error
 	Delete(objId uint64) error
 	Get(objIds []uint64) ([]objstore.Object, error)
-	SemanticSearch(obj any, k int)
+	SemanticSearch(obj *objstore.Object, k int)
 }

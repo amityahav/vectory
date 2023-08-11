@@ -4,11 +4,11 @@ import (
 	"Vectory/db/core/indexes"
 	"Vectory/db/core/indexes/distance"
 	"Vectory/db/core/indexes/utils"
+	"Vectory/db/core/objstore"
 	"Vectory/entities"
 	"Vectory/entities/collection"
 	"fmt"
 	"math"
-	"math/rand"
 	"sync"
 )
 
@@ -32,7 +32,7 @@ type Hnsw struct {
 	wal              *wal
 }
 
-func NewHnsw(params collection.HnswParams, filesPath string) (*Hnsw, error) {
+func NewHnsw(params collection.HnswParams, filesPath string, store *objstore.ObjectStore) (*Hnsw, error) {
 	h := Hnsw{
 		m:                params.M,
 		mMax:             params.MMax,
@@ -66,7 +66,11 @@ func NewHnsw(params collection.HnswParams, filesPath string) (*Hnsw, error) {
 
 	h.wal = w
 
-	if err = h.init(); err != nil {
+	if err = h.loadFromWAL(); err != nil {
+		return nil, err
+	}
+
+	if err = h.populateVerticesVectors(store); err != nil {
 		return nil, err
 	}
 
@@ -75,16 +79,4 @@ func NewHnsw(params collection.HnswParams, filesPath string) (*Hnsw, error) {
 
 func (h *Hnsw) Flush() error {
 	return h.wal.flush()
-}
-
-func (h *Hnsw) calculateDistance(v1, v2 []float32) float32 {
-	return h.distFunc(v1, v2)
-}
-
-func (h *Hnsw) isEmpty() bool {
-	return len(h.nodes) == 0
-}
-
-func (h *Hnsw) calculateLevelForVertex() int64 {
-	return int64(math.Floor(-math.Log(rand.Float64()) * h.mL))
 }

@@ -60,3 +60,8 @@ func (s *ObjectStore) Delete(id uint64) error {
 
 	return s.db.Delete(idBytes)
 }
+
+// TODO: we can do better
+func (s *ObjectStore) GetStore() *bitcask.Bitcask {
+	return s.db
+}

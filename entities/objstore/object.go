@@ -1,6 +1,9 @@
 package objstore
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"math"
+)
 
 const (
 	Text = iota
@@ -15,7 +18,7 @@ type Object struct {
 }
 
 func (o *Object) Serialize() []byte {
-	b := make([]byte, 4+len(o.Data)) // Id + DataLen + Data
+	b := make([]byte, 4+len(o.Data)+4+4*len(o.Vector)) // Id + DataLen + Data + VecDim + Vector
 
 	var offset int
 
@@ -27,6 +30,14 @@ func (o *Object) Serialize() []byte {
 
 	copy(b[offset:], o.Data)
 	offset += len(o.Data)
+
+	binary.LittleEndian.PutUint32(b[offset:], uint32(len(o.Vector)))
+	offset += 4
+
+	for _, f := range o.Vector {
+		binary.LittleEndian.PutUint32(b[offset:], math.Float32bits(f))
+		offset += 4
+	}
 
 	return b
 }
@@ -45,4 +56,14 @@ func (o *Object) Deserialize(object []byte) {
 	o.Data = string(dataBytes)
 	offset += dataLen
 
+	dim := int(binary.LittleEndian.Uint32(object[offset:]))
+	offset += 4
+
+	vec := make([]float32, dim)
+	for i := 0; i < dim; i++ {
+		vec[i] = math.Float32frombits(binary.LittleEndian.Uint32(object[offset:]))
+		offset += 4
+	}
+
+	o.Vector = vec
 }

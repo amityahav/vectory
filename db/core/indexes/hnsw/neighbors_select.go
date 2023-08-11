@@ -10,7 +10,7 @@ func (h *Hnsw) selectNeighborsHeuristic(v *Vertex, candidates []utils.Element, m
 
 	workingQ := utils.NewMinHeapFromSliceDeep(candidates, cap(candidates))
 
-	visited := NewSet[uint64]()
+	visited := newSet[uint64]()
 	for _, c := range candidates {
 		visited.Add(c.Id)
 	}
