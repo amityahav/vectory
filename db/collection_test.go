@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestCollection(t *testing.T) {
@@ -60,6 +61,51 @@ func TestCollection(t *testing.T) {
 			require.Equal(t, o, objs[i])
 		}
 	})
+}
+
+func BenchmarkCollection_Insert(b *testing.B) {
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	filesPath := "./tmp"
+
+	ctx := context.Background()
+	db, err := Open(filesPath)
+	require.NoError(b, err)
+
+	//defer os.RemoveAll(filesPath)
+
+	c, err := db.CreateCollection(ctx, &collection.Collection{
+		Name:      "test_collection",
+		IndexType: "hnsw",
+		DataType:  "text",
+		IndexParams: collection.HnswParams{
+			M:              64,
+			MMax:           128,
+			EfConstruction: 100,
+			Ef:             100,
+			Heuristic:      true,
+			DistanceType:   "dot_product",
+		},
+	})
+	require.NoError(b, err)
+
+	dim := 128
+	objects := make([]*objstore.Object, 100000)
+	for i := 0; i < len(objects); i++ {
+		objects[i] = &objstore.Object{
+			Id:     0,
+			Data:   "Hello world",
+			Vector: randomVector(dim),
+		}
+	}
+
+	start := time.Now()
+	err = c.InsertBatch(objects)
+	require.NoError(b, err)
+	end := time.Since(start)
+
+	fmt.Printf("batch insertion took: %s\n", end)
 }
 
 func randomVector(dim int) []float32 {

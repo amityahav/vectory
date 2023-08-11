@@ -7,8 +7,10 @@ import (
 	"Vectory/entities"
 	"Vectory/entities/collection"
 	objstoreentities "Vectory/entities/objstore"
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/alitto/pond"
 	"github.com/pkg/errors"
 )
 
@@ -23,8 +25,8 @@ type Collection struct {
 	idCounter   *IdCounter
 	logger      any
 	embedder    any
+	wp          *pond.WorkerPool
 	filesPath   string
-	wal         any
 	config      collection.Collection
 }
 
@@ -34,8 +36,7 @@ func newCollection(id int, cfg *collection.Collection, filesPath string) (*Colle
 		name:     cfg.Name,
 		dataType: cfg.DataType,
 		embedder: nil,
-		logger:   nil,
-		wal:      nil,
+		wp:       pond.New(1, 1000), // TODO: should be configurable
 		config:   *cfg,
 	}
 
@@ -97,6 +98,37 @@ func (c *Collection) Insert(obj *objstoreentities.Object) error {
 	}
 
 	return nil
+}
+
+func (c *Collection) InsertBatch(objs []*objstoreentities.Object) error {
+	workers := c.wp.MaxWorkers()
+	objsInChunk := len(objs) / workers
+	group, ctx := c.wp.GroupContext(context.TODO())
+	defer ctx.Done()
+
+	var offset int
+
+	chunks := make([]int, workers)
+	for i := 0; i < workers; i++ {
+		chunks[i] = objsInChunk
+	}
+
+	chunks[workers-1] += len(objs) % workers
+
+	for i := 0; i < workers; i++ {
+		//end := offset + objsInChunk
+		group.Submit(func() error {
+			for _, obj := range objs {
+				return c.Insert(obj) // TODO: dont fail the entire batch?
+			}
+
+			return nil
+		})
+
+		offset += objsInChunk
+	}
+
+	return group.Wait()
 }
 
 func (c *Collection) Update(obj *objstoreentities.Object) error {

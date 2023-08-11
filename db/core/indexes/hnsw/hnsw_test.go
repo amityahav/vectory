@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-func BenchmarkInsertion(b *testing.B) {
+func BenchmarkHnsw_Insert(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 	//defer profile.Start(profile.CPUProfile, profile.ProfilePath("./profile")).Stop()
@@ -50,7 +50,7 @@ func BenchmarkInsertion(b *testing.B) {
 }
 
 func TestRestoreFromDisk(t *testing.T) {
-	filesPath := "./tmp"
+	filesPath := "../tmp"
 	defer os.RemoveAll(filesPath)
 
 	store, err := objstore.NewObjectStore(filesPath)
@@ -94,7 +94,7 @@ func TestRestoreFromDisk(t *testing.T) {
 
 	end := time.Since(start)
 
-	fmt.Printf("reloading from disk took: %s", end)
+	fmt.Printf("reloading from disk took: %s\n", end)
 
 	// compare old hnsw with restored hnsw
 	require.Equal(t, h.entrypointID, hRestored.entrypointID)

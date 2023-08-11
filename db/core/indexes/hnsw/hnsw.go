@@ -77,6 +77,6 @@ func NewHnsw(params collection.HnswParams, filesPath string, store *objstore.Obj
 	return &h, nil
 }
 
-func (h *Hnsw) Flush() error {
+func (h *Hnsw) flush() error {
 	return h.wal.flush()
 }

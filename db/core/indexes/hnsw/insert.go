@@ -138,7 +138,7 @@ func (h *Hnsw) Insert(vector []float32, vectorId uint64) error {
 	}
 	h.Unlock()
 
-	return h.Flush()
+	return h.flush()
 }
 
 func (h *Hnsw) insertFirstVertex(v *Vertex) error {
