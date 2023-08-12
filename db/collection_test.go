@@ -1,6 +1,7 @@
 package db
 
 import (
+	"Vectory/entities"
 	"Vectory/entities/collection"
 	"Vectory/entities/objstore"
 	"context"
@@ -31,7 +32,7 @@ func TestCollection(t *testing.T) {
 			EfConstruction: 100,
 			Ef:             100,
 			Heuristic:      true,
-			DistanceType:   "dot_product",
+			DistanceType:   entities.Euclidean,
 		},
 	})
 	require.NoError(t, err)
@@ -87,7 +88,7 @@ func BenchmarkCollection_Insert(b *testing.B) {
 			EfConstruction: 100,
 			Ef:             100,
 			Heuristic:      true,
-			DistanceType:   "dot_product",
+			DistanceType:   entities.Euclidean,
 		},
 	})
 	require.NoError(b, err)
