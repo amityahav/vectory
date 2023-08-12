@@ -37,33 +37,31 @@ func TestHnsw(t *testing.T) {
 	}
 
 	_ = hnsw.Search(randomVector(dim), 10)
-
 }
-func TestInsert(t *testing.T) {
-	//b.ResetTimer()
-	//b.ReportAllocs()
-	//defer profile.Start(profile.CPUProfile, profile.ProfilePath("./profile")).Stop()
+
+func BenchmarkHnsw_Insert(b *testing.B) {
+	b.ResetTimer()
+	b.ReportAllocs()
+	defer profile.Start(profile.CPUProfile, profile.ProfilePath("./profile")).Stop()
 	filesPath := "./tmp"
 
 	hnsw, _ := newHnsw(filesPath)
 	size := 10000
 	dim := 128
-	ch := make(chan job)
+	ch := make(chan job, 10000)
 	vec := randomVector(dim)
-	go func(ch chan job) {
-		for i := 0; i < size; i++ {
-			ch <- job{
-				id:     uint64(i),
-				vector: vec,
-			}
-
-			if i%1000 == 0 {
-				log.Printf("inserted %d", i)
-			}
-
+	for i := 0; i < size; i++ {
+		ch <- job{
+			id:     uint64(i),
+			vector: vec,
 		}
-		close(ch)
-	}(ch)
+
+		if i%1000 == 0 {
+			log.Printf("inserted %d", i)
+		}
+
+	}
+	close(ch)
 
 	start := time.Now()
 	var wg sync.WaitGroup
@@ -134,8 +132,9 @@ func TestSift(t *testing.T) {
 	defer profile.Start(profile.CPUProfile, profile.ProfilePath("./profile")).Stop()
 
 	// Loading vectors
-	ch := make(chan job)
-	go loadSiftBaseVectors("./siftsmall/siftsmall_base.fvecs", ch)
+	ch := make(chan job, 10000)
+	loadSiftBaseVectors("./siftsmall/siftsmall_base.fvecs", ch)
+	//loadRandomVectors(ch)
 
 	// Building index
 	filesPath := "./tmp"

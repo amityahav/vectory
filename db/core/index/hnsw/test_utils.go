@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"math"
-	"math/rand"
 	"os"
 	"runtime"
 	"sync"
@@ -34,7 +33,7 @@ func randomVector(dim int) []float32 {
 	vec := make([]float32, dim)
 
 	for i := range vec {
-		vec[i] = rand.Float32()
+		vec[i] = 23
 	}
 
 	return vec
@@ -106,7 +105,6 @@ func loadSiftBaseVectors(path string, ch chan job) {
 
 	buf := bufio2.NewReader(f)
 	b := make([]byte, 4)
-	//vec := randomVector(128)
 	for i := 0; i < 10000; i++ {
 		dim, err := readUint32(buf, b)
 		if err != nil {
@@ -125,6 +123,22 @@ func loadSiftBaseVectors(path string, ch chan job) {
 		ch <- job{
 			id:     uint64(i),
 			vector: vector,
+		}
+
+		if i%1000 == 0 {
+			log.Printf("inserted %d", i)
+		}
+	}
+
+	close(ch)
+}
+
+func loadRandomVectors(ch chan job) {
+	vec := randomVector(128)
+	for i := 0; i < 10000; i++ {
+		ch <- job{
+			id:     uint64(i),
+			vector: vec,
 		}
 
 		if i%1000 == 0 {

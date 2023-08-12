@@ -78,31 +78,45 @@ func newCollection(id int, cfg *collection.Collection, filesPath string) (*Colle
 }
 
 func (c *Collection) Insert(obj *objstoreentities.Object) error {
-	// TODO: validate obj data type is the same as collection's
-	if obj.Vector == nil {
-		// TODO: create embedding and store in obj
-	}
-
-	id, err := c.idCounter.FetchAndInc()
-	if err != nil {
+	if err := c.insert(obj); err != nil {
 		return err
 	}
 
-	obj.Id = id
-
-	if err = c.objStore.Put(obj); err != nil {
-		return err
-	}
-
-	if err = c.vectorIndex.Insert(obj.Vector, obj.Id); err != nil {
-		return err
-	}
-
-	if err = c.vectorIndex.Flush(); err != nil {
+	if err := c.vectorIndex.Flush(); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (c *Collection) InsertBatch2(objects chan *objstoreentities.Object) error {
+	group, ctx := c.wp.GroupContext(context.TODO())
+	defer ctx.Done()
+
+	for i := 0; i < c.wp.MaxWorkers(); i++ {
+		group.Submit(func() error {
+			for {
+				obj, ok := <-objects
+				if !ok {
+					break
+				}
+
+				err := c.insert(obj)
+				if err != nil {
+					return err
+				}
+			}
+
+			return nil
+		})
+	}
+
+	err := group.Wait()
+	if err != nil {
+		return err
+	}
+
+	return c.vectorIndex.Flush()
 }
 
 func (c *Collection) InsertBatch(objs []*objstoreentities.Object) error {
@@ -122,13 +136,13 @@ func (c *Collection) InsertBatch(objs []*objstoreentities.Object) error {
 		workerFunc := func(start, end int) func() error {
 			return func() error {
 				for _, obj := range objs[start:end] {
-					err := c.Insert(obj)
+					err := c.insert(obj)
 					if err != nil { // TODO: dont fail the entire batch?
 						return err
 					}
 				}
 
-				return c.vectorIndex.Flush()
+				return nil
 			}
 		}(offset, end)
 
@@ -137,7 +151,32 @@ func (c *Collection) InsertBatch(objs []*objstoreentities.Object) error {
 		offset = end
 	}
 
-	return group.Wait()
+	err := group.Wait()
+	if err != nil {
+		return err
+	}
+
+	return c.vectorIndex.Flush()
+}
+
+func (c *Collection) insert(obj *objstoreentities.Object) error {
+	// TODO: validate obj data type is the same as collection's
+	if obj.Vector == nil {
+		// TODO: create embedding and store in obj
+	}
+
+	id, err := c.idCounter.FetchAndInc()
+	if err != nil {
+		return err
+	}
+
+	obj.Id = id
+
+	if err = c.objStore.Put(obj); err != nil {
+		return err
+	}
+
+	return c.vectorIndex.Insert(obj.Vector, obj.Id)
 }
 
 func (c *Collection) Update(obj *objstoreentities.Object) error {

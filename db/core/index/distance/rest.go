@@ -3,13 +3,13 @@ package distance
 import "math"
 
 func EuclideanDistance(v1, v2 []float32) float32 {
-	var sum float64
+	var sum float32
 
 	for i := 0; i < len(v1); i++ {
-		sum += float64(v1[i]-v2[i]) * float64(v1[i]-v2[i])
+		sum += (v1[i] - v2[i]) * (v1[i] - v2[i])
 	}
 
-	return float32(math.Sqrt(sum))
+	return float32(math.Sqrt(float64(sum)))
 }
 
 func manhatthanDistance(v1, v2 []float32) float32 {

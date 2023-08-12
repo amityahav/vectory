@@ -4,10 +4,15 @@ import (
 	"Vectory/entities"
 	"Vectory/entities/collection"
 	"Vectory/entities/objstore"
+	bufio2 "bufio"
 	"context"
+	"encoding/binary"
 	"fmt"
 	"github.com/pkg/profile"
 	"github.com/stretchr/testify/require"
+	"io"
+	"log"
+	"math"
 	"math/rand"
 	"os"
 	"testing"
@@ -65,7 +70,59 @@ func TestCollection(t *testing.T) {
 	})
 }
 
-func BenchmarkCollection_Insert(b *testing.B) {
+func loadObjects(path string) []*objstore.Object {
+	f, err := os.Open(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	objects := make([]*objstore.Object, 10000)
+
+	buf := bufio2.NewReader(f)
+	b := make([]byte, 4)
+	for i := 0; i < 10000; i++ {
+		dim, err := readUint32(buf, b)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		vector := make([]float32, dim)
+
+		for j := 0; j < int(dim); j++ {
+			vector[j], err = readFloat32(buf, b)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		objects[i] = &objstore.Object{
+			Data:   "",
+			Vector: vector,
+		}
+	}
+
+	return objects
+}
+
+func readUint32(f io.Reader, b []byte) (uint32, error) {
+	_, err := f.Read(b)
+	if err != nil {
+		return 0, err
+	}
+
+	return binary.LittleEndian.Uint32(b), nil
+}
+
+func readFloat32(f io.Reader, b []byte) (float32, error) {
+	_, err := f.Read(b)
+	if err != nil {
+		return 0, err
+	}
+
+	return math.Float32frombits(binary.LittleEndian.Uint32(b)), nil
+}
+
+func BenchmarkCollection_InsertBatch(b *testing.B) {
 	defer profile.Start(profile.CPUProfile, profile.ProfilePath("./profile")).Stop()
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -85,7 +142,55 @@ func BenchmarkCollection_Insert(b *testing.B) {
 		IndexParams: collection.HnswParams{
 			M:              64,
 			MMax:           128,
-			EfConstruction: 100,
+			EfConstruction: 400,
+			Ef:             100,
+			Heuristic:      true,
+			DistanceType:   entities.Euclidean,
+		},
+	})
+	require.NoError(b, err)
+
+	//dim := 128
+	//objects := make([]*objstore.Object, 10000)
+	//for i := 0; i < len(objects); i++ {
+	//	objects[i] = &objstore.Object{
+	//		Id:     0,
+	//		Data:   "Hello world",
+	//		Vector: randomVector(dim),
+	//	}
+	//}
+
+	objects := loadObjects("./core/index/hnsw/siftsmall/siftsmall_base.fvecs")
+
+	start := time.Now()
+	err = c.InsertBatch(objects)
+	require.NoError(b, err)
+	end := time.Since(start)
+
+	fmt.Printf("batch insertion took: %s\n", end)
+}
+
+func BenchmarkCollection_InsertBatch2(b *testing.B) {
+	defer profile.Start(profile.CPUProfile, profile.ProfilePath("./profile")).Stop()
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	filesPath := "./tmp"
+
+	ctx := context.Background()
+	db, err := Open(filesPath)
+	require.NoError(b, err)
+
+	defer os.RemoveAll(filesPath)
+
+	c, err := db.CreateCollection(ctx, &collection.Collection{
+		Name:      "test_collection",
+		IndexType: "hnsw",
+		DataType:  "text",
+		IndexParams: collection.HnswParams{
+			M:              64,
+			MMax:           128,
+			EfConstruction: 400,
 			Ef:             100,
 			Heuristic:      true,
 			DistanceType:   entities.Euclidean,
@@ -103,8 +208,16 @@ func BenchmarkCollection_Insert(b *testing.B) {
 		}
 	}
 
+	objects = loadObjects("./core/index/hnsw/siftsmall/siftsmall_base.fvecs")
+
+	ch := make(chan *objstore.Object, 10000)
+	for i := 0; i < 10000; i++ {
+		ch <- objects[i]
+	}
+	close(ch)
+
 	start := time.Now()
-	err = c.InsertBatch(objects)
+	err = c.InsertBatch2(ch)
 	require.NoError(b, err)
 	end := time.Since(start)
 
