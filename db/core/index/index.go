@@ -1,6 +1,6 @@
-package indexes
+package index
 
-import "Vectory/db/core/indexes/utils"
+import "Vectory/db/core/index/utils"
 
 type VectorIndex interface {
 	// Insert a new vector and its corresponding objId
@@ -11,4 +11,7 @@ type VectorIndex interface {
 
 	// Search for K-NN of vector
 	Search(q []float32, k int) []utils.Element
+
+	// Flush WAL to disk
+	Flush() error
 }

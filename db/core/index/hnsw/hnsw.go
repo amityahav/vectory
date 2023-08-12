@@ -1,9 +1,9 @@
 package hnsw
 
 import (
-	"Vectory/db/core/indexes"
-	"Vectory/db/core/indexes/distance"
-	"Vectory/db/core/indexes/utils"
+	"Vectory/db/core/index"
+	"Vectory/db/core/index/distance"
+	"Vectory/db/core/index/utils"
 	"Vectory/db/core/objstore"
 	"Vectory/entities"
 	"Vectory/entities/collection"
@@ -12,7 +12,7 @@ import (
 	"sync"
 )
 
-var _ indexes.VectorIndex = &Hnsw{}
+var _ index.VectorIndex = &Hnsw{}
 
 type Hnsw struct {
 	sync.RWMutex
@@ -77,6 +77,6 @@ func NewHnsw(params collection.HnswParams, filesPath string, store *objstore.Obj
 	return &h, nil
 }
 
-func (h *Hnsw) flush() error {
+func (h *Hnsw) Flush() error {
 	return h.wal.flush()
 }

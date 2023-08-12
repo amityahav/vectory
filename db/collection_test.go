@@ -5,6 +5,7 @@ import (
 	"Vectory/entities/objstore"
 	"context"
 	"fmt"
+	"github.com/pkg/profile"
 	"github.com/stretchr/testify/require"
 	"math/rand"
 	"os"
@@ -64,6 +65,7 @@ func TestCollection(t *testing.T) {
 }
 
 func BenchmarkCollection_Insert(b *testing.B) {
+	defer profile.Start(profile.CPUProfile, profile.ProfilePath("./profile")).Stop()
 	b.ResetTimer()
 	b.ReportAllocs()
 
@@ -73,7 +75,7 @@ func BenchmarkCollection_Insert(b *testing.B) {
 	db, err := Open(filesPath)
 	require.NoError(b, err)
 
-	//defer os.RemoveAll(filesPath)
+	defer os.RemoveAll(filesPath)
 
 	c, err := db.CreateCollection(ctx, &collection.Collection{
 		Name:      "test_collection",
@@ -91,7 +93,7 @@ func BenchmarkCollection_Insert(b *testing.B) {
 	require.NoError(b, err)
 
 	dim := 128
-	objects := make([]*objstore.Object, 100000)
+	objects := make([]*objstore.Object, 10000)
 	for i := 0; i < len(objects); i++ {
 		objects[i] = &objstore.Object{
 			Id:     0,

@@ -1,8 +1,8 @@
 package db
 
 import (
-	"Vectory/db/core/indexes"
-	"Vectory/db/core/indexes/hnsw"
+	"Vectory/db/core/index"
+	"Vectory/db/core/index/hnsw"
 	"Vectory/db/core/objstore"
 	"Vectory/entities"
 	"Vectory/entities/collection"
@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/alitto/pond"
 	"github.com/pkg/errors"
+	"runtime"
 )
 
 var _ CRUD = &Collection{}
@@ -21,7 +22,7 @@ type Collection struct {
 	name        string
 	dataType    string
 	objStore    *objstore.ObjectStore
-	vectorIndex indexes.VectorIndex
+	vectorIndex index.VectorIndex
 	idCounter   *IdCounter
 	logger      any
 	embedder    any
@@ -36,7 +37,7 @@ func newCollection(id int, cfg *collection.Collection, filesPath string) (*Colle
 		name:     cfg.Name,
 		dataType: cfg.DataType,
 		embedder: nil,
-		wp:       pond.New(1, 1000), // TODO: should be configurable
+		wp:       pond.New(runtime.NumCPU(), 1000), // TODO: should be configurable
 		config:   *cfg,
 	}
 
@@ -97,6 +98,10 @@ func (c *Collection) Insert(obj *objstoreentities.Object) error {
 		return err
 	}
 
+	if err = c.vectorIndex.Flush(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -108,24 +113,28 @@ func (c *Collection) InsertBatch(objs []*objstoreentities.Object) error {
 
 	var offset int
 
-	chunks := make([]int, workers)
 	for i := 0; i < workers; i++ {
-		chunks[i] = objsInChunk
-	}
+		end := offset + objsInChunk
+		if i == workers-1 { // remainder
+			end += len(objs) % workers
+		}
 
-	chunks[workers-1] += len(objs) % workers
+		workerFunc := func(start, end int) func() error {
+			return func() error {
+				for _, obj := range objs[start:end] {
+					err := c.Insert(obj)
+					if err != nil { // TODO: dont fail the entire batch?
+						return err
+					}
+				}
 
-	for i := 0; i < workers; i++ {
-		//end := offset + objsInChunk
-		group.Submit(func() error {
-			for _, obj := range objs {
-				return c.Insert(obj) // TODO: dont fail the entire batch?
+				return c.vectorIndex.Flush()
 			}
+		}(offset, end)
 
-			return nil
-		})
+		group.Submit(workerFunc)
 
-		offset += objsInChunk
+		offset = end
 	}
 
 	return group.Wait()

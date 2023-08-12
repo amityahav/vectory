@@ -1,7 +1,7 @@
 package hnsw
 
 import (
-	"Vectory/db/core/indexes/utils"
+	"Vectory/db/core/index/utils"
 	"container/heap"
 )
 

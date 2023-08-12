@@ -1,7 +1,7 @@
 package hnsw
 
 import (
-	"Vectory/db/core/indexes/utils"
+	"Vectory/db/core/index/utils"
 	"fmt"
 )
 
@@ -138,7 +138,7 @@ func (h *Hnsw) Insert(vector []float32, vectorId uint64) error {
 	}
 	h.Unlock()
 
-	return h.flush()
+	return nil
 }
 
 func (h *Hnsw) insertFirstVertex(v *Vertex) error {

@@ -1,6 +1,6 @@
 package disk_ann
 
-import "Vectory/db/core/indexes/utils"
+import "Vectory/db/core/index/utils"
 
 type DiskIndex struct {
 	dal *dal

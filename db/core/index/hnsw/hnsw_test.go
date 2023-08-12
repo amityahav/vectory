@@ -22,30 +22,30 @@ func BenchmarkHnsw_Insert(b *testing.B) {
 	//defer profile.Start(profile.CPUProfile, profile.ProfilePath("./profile")).Stop()
 	filesPath := "./tmp"
 
-	for i := 0; i < b.N; i++ {
-		hnsw, _ := newHnsw(filesPath)
-		size := 100000
-		dim := 128
-		ch := make(chan job, size)
-		for i := 0; i < size; i++ {
-			j := job{
-				id:     uint64(i),
-				vector: randomVector(dim),
-			}
-
-			ch <- j
+	hnsw, _ := newHnsw(filesPath)
+	size := 1000
+	dim := 128
+	ch := make(chan job, size)
+	for i := 0; i < size; i++ {
+		j := job{
+			id:     uint64(i),
+			vector: randomVector(dim),
 		}
-		start := time.Now()
 
-		wg := sync.WaitGroup{}
-		go insertInParallel(ch, hnsw, &wg)
-		wg.Wait()
-
-		end := time.Since(start)
-		fmt.Printf("insertion took: %s\n", end)
-
-		os.RemoveAll(filesPath)
+		ch <- j
 	}
+	close(ch)
+
+	start := time.Now()
+
+	wg := sync.WaitGroup{}
+	go insertInParallel(ch, hnsw, &wg)
+	wg.Wait()
+
+	end := time.Since(start)
+	fmt.Printf("insertion took: %s\n", end)
+
+	os.RemoveAll(filesPath)
 	//_ = hnsw.Search(randomVector(dim), 10)
 }
 
@@ -103,15 +103,18 @@ func TestRestoreFromDisk(t *testing.T) {
 }
 
 func TestSift(t *testing.T) {
-	defer profile.Start(profile.MemProfile, profile.ProfilePath("./profile")).Stop()
+	defer profile.Start(profile.CPUProfile, profile.ProfilePath("./profile")).Stop()
 
 	// Loading vectors
 	ch := make(chan job)
 	go loadSiftBaseVectors("./siftsmall/siftsmall_base.fvecs", ch)
 
 	// Building index
+	filesPath := "./tmp"
 	start := time.Now()
-	hnsw := buildIndexParallel(ch)
+	hnsw := buildIndexParallel(ch, filesPath)
+	defer os.RemoveAll(filesPath)
+
 	duration := time.Since(start)
 
 	log.Printf("Building index took: %v", duration)

@@ -20,10 +20,10 @@ type job struct {
 
 func newHnsw(filesPath string) (*Hnsw, error) {
 	return NewHnsw(collection.HnswParams{
-		M:              64,
-		MMax:           128,
-		EfConstruction: 100,
-		Ef:             100,
+		M:              32,
+		MMax:           64,
+		EfConstruction: 400,
+		Ef:             64,
 		Heuristic:      true,
 		DistanceType:   "dot_product",
 	}, filesPath, nil)
@@ -40,7 +40,7 @@ func randomVector(dim int) []float32 {
 }
 
 func insertInParallel(insertionChannel chan job, h *Hnsw, wg *sync.WaitGroup) {
-	for i := 0; i < runtime.NumCPU(); i++ {
+	for i := 0; i < 1; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -61,8 +61,8 @@ func insertInParallel(insertionChannel chan job, h *Hnsw, wg *sync.WaitGroup) {
 	}
 }
 
-func buildIndexParallel(insertionChannel chan job) *Hnsw {
-	hnsw, _ := newHnsw("")
+func buildIndexParallel(insertionChannel chan job, filesPath string) *Hnsw {
+	hnsw, _ := newHnsw(filesPath)
 	var wg sync.WaitGroup
 
 	for i := 0; i < runtime.NumCPU(); i++ {

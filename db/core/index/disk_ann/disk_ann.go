@@ -1,7 +1,7 @@
 package disk_ann
 
 import (
-	"Vectory/db/core/indexes/utils"
+	"Vectory/db/core/index/utils"
 	"fmt"
 	"sync"
 	"sync/atomic"

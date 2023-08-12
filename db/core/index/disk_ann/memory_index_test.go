@@ -1,7 +1,7 @@
 package disk_ann
 
 import (
-	"Vectory/db/core/indexes/distance"
+	"Vectory/db/core/index/distance"
 	"github.com/pkg/profile"
 	"github.com/stretchr/testify/require"
 	"log"
