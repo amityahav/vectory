@@ -70,58 +70,6 @@ func TestCollection(t *testing.T) {
 	})
 }
 
-func loadObjects(path string) []*objstore.Object {
-	f, err := os.Open(path)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	objects := make([]*objstore.Object, 10000)
-
-	buf := bufio2.NewReader(f)
-	b := make([]byte, 4)
-	for i := 0; i < 10000; i++ {
-		dim, err := readUint32(buf, b)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		vector := make([]float32, dim)
-
-		for j := 0; j < int(dim); j++ {
-			vector[j], err = readFloat32(buf, b)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-
-		objects[i] = &objstore.Object{
-			Data:   "",
-			Vector: vector,
-		}
-	}
-
-	return objects
-}
-
-func readUint32(f io.Reader, b []byte) (uint32, error) {
-	_, err := f.Read(b)
-	if err != nil {
-		return 0, err
-	}
-
-	return binary.LittleEndian.Uint32(b), nil
-}
-
-func readFloat32(f io.Reader, b []byte) (float32, error) {
-	_, err := f.Read(b)
-	if err != nil {
-		return 0, err
-	}
-
-	return math.Float32frombits(binary.LittleEndian.Uint32(b)), nil
-}
-
 func BenchmarkCollection_InsertBatch(b *testing.B) {
 	defer profile.Start(profile.CPUProfile, profile.ProfilePath("./profile")).Stop()
 	b.ResetTimer()
@@ -232,4 +180,56 @@ func randomVector(dim int) []float32 {
 	}
 
 	return vec
+}
+
+func loadObjects(path string) []*objstore.Object {
+	f, err := os.Open(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	objects := make([]*objstore.Object, 10000)
+
+	buf := bufio2.NewReader(f)
+	b := make([]byte, 4)
+	for i := 0; i < 10000; i++ {
+		dim, err := readUint32(buf, b)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		vector := make([]float32, dim)
+
+		for j := 0; j < int(dim); j++ {
+			vector[j], err = readFloat32(buf, b)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		objects[i] = &objstore.Object{
+			Data:   "",
+			Vector: vector,
+		}
+	}
+
+	return objects
+}
+
+func readUint32(f io.Reader, b []byte) (uint32, error) {
+	_, err := f.Read(b)
+	if err != nil {
+		return 0, err
+	}
+
+	return binary.LittleEndian.Uint32(b), nil
+}
+
+func readFloat32(f io.Reader, b []byte) (float32, error) {
+	_, err := f.Read(b)
+	if err != nil {
+		return 0, err
+	}
+
+	return math.Float32frombits(binary.LittleEndian.Uint32(b)), nil
 }

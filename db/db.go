@@ -16,7 +16,6 @@ type DB struct {
 	collections     *sync.Map
 	logger          *logrus.Logger
 	filesPath       string
-	wal             any
 }
 
 // Open initialises Vectory and init collections and additional metadata if exists
