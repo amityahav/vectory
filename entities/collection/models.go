@@ -1,35 +1,26 @@
 package collection
 
+const (
+	TextDataType = "text"
+)
+
 type Collection struct {
+
 	// name
-	Name string `json:"name"`
+	Name string `json:"name,omitempty"`
 
 	// index type
-	IndexType string `json:"index_type"`
+	IndexType string `json:"index_type,omitempty"`
 
-	// embedder
-	Embedder string `json:"embedder"`
+	// embedder type
+	EmbedderType string `json:"embedder_type,omitempty"`
 
 	// data type
-	DataType string `json:"data_type"`
+	DataType string `json:"data_type,omitempty"`
 
 	// index params
-	IndexParams interface{} `json:"index_params"`
-}
+	IndexParams interface{} `json:"index_params,omitempty"`
 
-type HnswParams struct {
-	// Number of established connections
-	M int `json:"m"`
-
-	// Maximum number of connections for each element per layer
-	MMax int `json:"m_max"`
-
-	// size of the dynamic candidate list
-	EfConstruction int `json:"ef_construction"`
-
-	Ef int `json:"ef"`
-
-	Heuristic bool `json:"heuristic"`
-
-	DistanceType string `json:"distance_type"`
+	// embedder config
+	EmbedderConfig interface{} `json:"embedder_config,omitempty"`
 }

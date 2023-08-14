@@ -1,8 +1,8 @@
 package collection
 
 import (
-	"Vectory/entities"
-	"encoding/json"
+	"Vectory/entities/embeddings/hugging_face/text2vec"
+	"Vectory/entities/index"
 	"errors"
 )
 
@@ -14,9 +14,9 @@ func Validate(cfg *Collection) error {
 	var err error
 
 	switch cfg.IndexType {
-	case entities.Hnsw:
-		err = validateHnswParams(cfg.IndexParams)
-	case entities.DiskAnn:
+	case index.Hnsw:
+		err = index.ValidateHnswParams(cfg.IndexParams)
+	case index.DiskAnn:
 	default:
 		return ErrIndexTypeUnsupported
 	}
@@ -25,8 +25,14 @@ func Validate(cfg *Collection) error {
 		return err
 	}
 
+	switch cfg.EmbedderType {
+	case text2vec.Text2VecHuggingFace:
+	default:
+		return ErrEmbedderTypeUnsupported
+	}
+
 	switch cfg.DataType {
-	case entities.Text:
+	case TextDataType:
 	default:
 		return ErrDataTypeUnsupported
 	}
@@ -34,47 +40,9 @@ func Validate(cfg *Collection) error {
 	return nil
 }
 
-func validateHnswParams(params interface{}) error {
-	var hnswParams HnswParams
-
-	b, err := json.Marshal(params)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(b, &hnswParams)
-	if err != nil {
-		return err
-	}
-
-	if hnswParams.M <= 0 {
-		return errors.New("m must be greater than zero")
-	}
-
-	if hnswParams.MMax <= 0 {
-		return errors.New("m_max must be greater than zero")
-	}
-
-	if hnswParams.Ef <= 0 {
-		return errors.New("ef must be greater than zero")
-	}
-
-	if hnswParams.EfConstruction <= 0 {
-		return errors.New("ef_construction must be greater than zero")
-	}
-
-	switch hnswParams.DistanceType {
-	case entities.DotProduct:
-	case entities.Euclidean:
-	default:
-		return errors.New("unsupported distance_type")
-	}
-
-	return nil
-}
-
 var (
-	ErrCollectionNameEmpty  = errors.New("collection name field is empty")
-	ErrIndexTypeUnsupported = errors.New("index_type inserted is not supported")
-	ErrDataTypeUnsupported  = errors.New("data_type inserted is not supported")
+	ErrCollectionNameEmpty     = errors.New("collection name field is empty")
+	ErrIndexTypeUnsupported    = errors.New("index_type inserted is not supported")
+	ErrEmbedderTypeUnsupported = errors.New("embedder_type inserted is not supported")
+	ErrDataTypeUnsupported     = errors.New("data_type inserted is not supported")
 )

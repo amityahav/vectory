@@ -46,15 +46,21 @@ func (cu *CollectionUpdate) SetDataType(s string) *CollectionUpdate {
 	return cu
 }
 
-// SetEmbedder sets the "embedder" field.
-func (cu *CollectionUpdate) SetEmbedder(s string) *CollectionUpdate {
-	cu.mutation.SetEmbedder(s)
+// SetEmbedderType sets the "embedder_type" field.
+func (cu *CollectionUpdate) SetEmbedderType(s string) *CollectionUpdate {
+	cu.mutation.SetEmbedderType(s)
 	return cu
 }
 
 // SetIndexParams sets the "index_params" field.
 func (cu *CollectionUpdate) SetIndexParams(m map[string]interface{}) *CollectionUpdate {
 	cu.mutation.SetIndexParams(m)
+	return cu
+}
+
+// SetEmbedderConfig sets the "embedder_config" field.
+func (cu *CollectionUpdate) SetEmbedderConfig(m map[string]interface{}) *CollectionUpdate {
+	cu.mutation.SetEmbedderConfig(m)
 	return cu
 }
 
@@ -144,11 +150,14 @@ func (cu *CollectionUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if value, ok := cu.mutation.DataType(); ok {
 		_spec.SetField(collection.FieldDataType, field.TypeString, value)
 	}
-	if value, ok := cu.mutation.Embedder(); ok {
-		_spec.SetField(collection.FieldEmbedder, field.TypeString, value)
+	if value, ok := cu.mutation.EmbedderType(); ok {
+		_spec.SetField(collection.FieldEmbedderType, field.TypeString, value)
 	}
 	if value, ok := cu.mutation.IndexParams(); ok {
 		_spec.SetField(collection.FieldIndexParams, field.TypeJSON, value)
+	}
+	if value, ok := cu.mutation.EmbedderConfig(); ok {
+		_spec.SetField(collection.FieldEmbedderConfig, field.TypeJSON, value)
 	}
 	if cu.mutation.FilesCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -233,15 +242,21 @@ func (cuo *CollectionUpdateOne) SetDataType(s string) *CollectionUpdateOne {
 	return cuo
 }
 
-// SetEmbedder sets the "embedder" field.
-func (cuo *CollectionUpdateOne) SetEmbedder(s string) *CollectionUpdateOne {
-	cuo.mutation.SetEmbedder(s)
+// SetEmbedderType sets the "embedder_type" field.
+func (cuo *CollectionUpdateOne) SetEmbedderType(s string) *CollectionUpdateOne {
+	cuo.mutation.SetEmbedderType(s)
 	return cuo
 }
 
 // SetIndexParams sets the "index_params" field.
 func (cuo *CollectionUpdateOne) SetIndexParams(m map[string]interface{}) *CollectionUpdateOne {
 	cuo.mutation.SetIndexParams(m)
+	return cuo
+}
+
+// SetEmbedderConfig sets the "embedder_config" field.
+func (cuo *CollectionUpdateOne) SetEmbedderConfig(m map[string]interface{}) *CollectionUpdateOne {
+	cuo.mutation.SetEmbedderConfig(m)
 	return cuo
 }
 
@@ -361,11 +376,14 @@ func (cuo *CollectionUpdateOne) sqlSave(ctx context.Context) (_node *Collection,
 	if value, ok := cuo.mutation.DataType(); ok {
 		_spec.SetField(collection.FieldDataType, field.TypeString, value)
 	}
-	if value, ok := cuo.mutation.Embedder(); ok {
-		_spec.SetField(collection.FieldEmbedder, field.TypeString, value)
+	if value, ok := cuo.mutation.EmbedderType(); ok {
+		_spec.SetField(collection.FieldEmbedderType, field.TypeString, value)
 	}
 	if value, ok := cuo.mutation.IndexParams(); ok {
 		_spec.SetField(collection.FieldIndexParams, field.TypeJSON, value)
+	}
+	if value, ok := cuo.mutation.EmbedderConfig(); ok {
+		_spec.SetField(collection.FieldEmbedderConfig, field.TypeJSON, value)
 	}
 	if cuo.mutation.FilesCleared() {
 		edge := &sqlgraph.EdgeSpec{

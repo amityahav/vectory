@@ -69,9 +69,9 @@ func DataType(v string) predicate.Collection {
 	return predicate.Collection(sql.FieldEQ(FieldDataType, v))
 }
 
-// Embedder applies equality check predicate on the "embedder" field. It's identical to EmbedderEQ.
-func Embedder(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldEQ(FieldEmbedder, v))
+// EmbedderType applies equality check predicate on the "embedder_type" field. It's identical to EmbedderTypeEQ.
+func EmbedderType(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldEQ(FieldEmbedderType, v))
 }
 
 // NameEQ applies the EQ predicate on the "name" field.
@@ -269,69 +269,69 @@ func DataTypeContainsFold(v string) predicate.Collection {
 	return predicate.Collection(sql.FieldContainsFold(FieldDataType, v))
 }
 
-// EmbedderEQ applies the EQ predicate on the "embedder" field.
-func EmbedderEQ(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldEQ(FieldEmbedder, v))
+// EmbedderTypeEQ applies the EQ predicate on the "embedder_type" field.
+func EmbedderTypeEQ(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldEQ(FieldEmbedderType, v))
 }
 
-// EmbedderNEQ applies the NEQ predicate on the "embedder" field.
-func EmbedderNEQ(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldNEQ(FieldEmbedder, v))
+// EmbedderTypeNEQ applies the NEQ predicate on the "embedder_type" field.
+func EmbedderTypeNEQ(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldNEQ(FieldEmbedderType, v))
 }
 
-// EmbedderIn applies the In predicate on the "embedder" field.
-func EmbedderIn(vs ...string) predicate.Collection {
-	return predicate.Collection(sql.FieldIn(FieldEmbedder, vs...))
+// EmbedderTypeIn applies the In predicate on the "embedder_type" field.
+func EmbedderTypeIn(vs ...string) predicate.Collection {
+	return predicate.Collection(sql.FieldIn(FieldEmbedderType, vs...))
 }
 
-// EmbedderNotIn applies the NotIn predicate on the "embedder" field.
-func EmbedderNotIn(vs ...string) predicate.Collection {
-	return predicate.Collection(sql.FieldNotIn(FieldEmbedder, vs...))
+// EmbedderTypeNotIn applies the NotIn predicate on the "embedder_type" field.
+func EmbedderTypeNotIn(vs ...string) predicate.Collection {
+	return predicate.Collection(sql.FieldNotIn(FieldEmbedderType, vs...))
 }
 
-// EmbedderGT applies the GT predicate on the "embedder" field.
-func EmbedderGT(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldGT(FieldEmbedder, v))
+// EmbedderTypeGT applies the GT predicate on the "embedder_type" field.
+func EmbedderTypeGT(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldGT(FieldEmbedderType, v))
 }
 
-// EmbedderGTE applies the GTE predicate on the "embedder" field.
-func EmbedderGTE(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldGTE(FieldEmbedder, v))
+// EmbedderTypeGTE applies the GTE predicate on the "embedder_type" field.
+func EmbedderTypeGTE(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldGTE(FieldEmbedderType, v))
 }
 
-// EmbedderLT applies the LT predicate on the "embedder" field.
-func EmbedderLT(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldLT(FieldEmbedder, v))
+// EmbedderTypeLT applies the LT predicate on the "embedder_type" field.
+func EmbedderTypeLT(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldLT(FieldEmbedderType, v))
 }
 
-// EmbedderLTE applies the LTE predicate on the "embedder" field.
-func EmbedderLTE(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldLTE(FieldEmbedder, v))
+// EmbedderTypeLTE applies the LTE predicate on the "embedder_type" field.
+func EmbedderTypeLTE(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldLTE(FieldEmbedderType, v))
 }
 
-// EmbedderContains applies the Contains predicate on the "embedder" field.
-func EmbedderContains(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldContains(FieldEmbedder, v))
+// EmbedderTypeContains applies the Contains predicate on the "embedder_type" field.
+func EmbedderTypeContains(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldContains(FieldEmbedderType, v))
 }
 
-// EmbedderHasPrefix applies the HasPrefix predicate on the "embedder" field.
-func EmbedderHasPrefix(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldHasPrefix(FieldEmbedder, v))
+// EmbedderTypeHasPrefix applies the HasPrefix predicate on the "embedder_type" field.
+func EmbedderTypeHasPrefix(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldHasPrefix(FieldEmbedderType, v))
 }
 
-// EmbedderHasSuffix applies the HasSuffix predicate on the "embedder" field.
-func EmbedderHasSuffix(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldHasSuffix(FieldEmbedder, v))
+// EmbedderTypeHasSuffix applies the HasSuffix predicate on the "embedder_type" field.
+func EmbedderTypeHasSuffix(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldHasSuffix(FieldEmbedderType, v))
 }
 
-// EmbedderEqualFold applies the EqualFold predicate on the "embedder" field.
-func EmbedderEqualFold(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldEqualFold(FieldEmbedder, v))
+// EmbedderTypeEqualFold applies the EqualFold predicate on the "embedder_type" field.
+func EmbedderTypeEqualFold(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldEqualFold(FieldEmbedderType, v))
 }
 
-// EmbedderContainsFold applies the ContainsFold predicate on the "embedder" field.
-func EmbedderContainsFold(v string) predicate.Collection {
-	return predicate.Collection(sql.FieldContainsFold(FieldEmbedder, v))
+// EmbedderTypeContainsFold applies the ContainsFold predicate on the "embedder_type" field.
+func EmbedderTypeContainsFold(v string) predicate.Collection {
+	return predicate.Collection(sql.FieldContainsFold(FieldEmbedderType, v))
 }
 
 // HasFiles applies the HasEdge predicate on the "files" edge.

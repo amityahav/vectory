@@ -11,7 +11,7 @@ import (
 	"os"
 )
 
-// MetaManager is responsible for managing all of Vectory's metadata about collections, etc..
+// MetaManager is responsible for managing all of Vectory's metadata of collections, etc..
 type MetaManager struct {
 	db        *ent.Client
 	filesPath string
@@ -49,11 +49,23 @@ func (m *MetaManager) CreateCollection(ctx context.Context, cfg *collectionent.C
 		return 0, err
 	}
 
+	b, err = json.Marshal(cfg.EmbedderConfig)
+	if err != nil {
+		return 0, nil
+	}
+
+	var config map[string]interface{}
+	err = json.Unmarshal(b, &config)
+	if err != nil {
+		return 0, err
+	}
+
 	c, err := m.db.Collection.Create().
 		SetName(cfg.Name).
 		SetIndexType(cfg.IndexType).
 		SetDataType(cfg.DataType).
-		SetEmbedder(cfg.Embedder).
+		SetEmbedderType(cfg.EmbedderType).
+		SetEmbedderConfig(config).
 		SetIndexParams(params).
 		Save(ctx)
 

@@ -14,8 +14,9 @@ var (
 		{Name: "name", Type: field.TypeString, Unique: true},
 		{Name: "index_type", Type: field.TypeString},
 		{Name: "data_type", Type: field.TypeString},
-		{Name: "embedder", Type: field.TypeString},
+		{Name: "embedder_type", Type: field.TypeString},
 		{Name: "index_params", Type: field.TypeJSON},
+		{Name: "embedder_config", Type: field.TypeJSON},
 	}
 	// CollectionsTable holds the schema information for the "collections" table.
 	CollectionsTable = &schema.Table{

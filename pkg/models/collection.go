@@ -18,8 +18,11 @@ type Collection struct {
 	// data type
 	DataType string `json:"data_type,omitempty"`
 
-	// embedder
-	Embedder string `json:"embedder,omitempty"`
+	// embedder config
+	EmbedderConfig interface{} `json:"embedder_config,omitempty"`
+
+	// embedder type
+	EmbedderType string `json:"embedder_type,omitempty"`
 
 	// index params
 	IndexParams interface{} `json:"index_params,omitempty"`

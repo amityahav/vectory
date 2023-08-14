@@ -17,6 +17,7 @@ type Config struct {
 	ListenPort int    `yaml:"listen_port"`
 }
 
+// main is invoked when deploying Vectory on the cloud.
 func main() {
 	var cfgPath string
 

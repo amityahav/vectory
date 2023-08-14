@@ -38,15 +38,21 @@ func (cc *CollectionCreate) SetDataType(s string) *CollectionCreate {
 	return cc
 }
 
-// SetEmbedder sets the "embedder" field.
-func (cc *CollectionCreate) SetEmbedder(s string) *CollectionCreate {
-	cc.mutation.SetEmbedder(s)
+// SetEmbedderType sets the "embedder_type" field.
+func (cc *CollectionCreate) SetEmbedderType(s string) *CollectionCreate {
+	cc.mutation.SetEmbedderType(s)
 	return cc
 }
 
 // SetIndexParams sets the "index_params" field.
 func (cc *CollectionCreate) SetIndexParams(m map[string]interface{}) *CollectionCreate {
 	cc.mutation.SetIndexParams(m)
+	return cc
+}
+
+// SetEmbedderConfig sets the "embedder_config" field.
+func (cc *CollectionCreate) SetEmbedderConfig(m map[string]interface{}) *CollectionCreate {
+	cc.mutation.SetEmbedderConfig(m)
 	return cc
 }
 
@@ -108,11 +114,14 @@ func (cc *CollectionCreate) check() error {
 	if _, ok := cc.mutation.DataType(); !ok {
 		return &ValidationError{Name: "data_type", err: errors.New(`ent: missing required field "Collection.data_type"`)}
 	}
-	if _, ok := cc.mutation.Embedder(); !ok {
-		return &ValidationError{Name: "embedder", err: errors.New(`ent: missing required field "Collection.embedder"`)}
+	if _, ok := cc.mutation.EmbedderType(); !ok {
+		return &ValidationError{Name: "embedder_type", err: errors.New(`ent: missing required field "Collection.embedder_type"`)}
 	}
 	if _, ok := cc.mutation.IndexParams(); !ok {
 		return &ValidationError{Name: "index_params", err: errors.New(`ent: missing required field "Collection.index_params"`)}
+	}
+	if _, ok := cc.mutation.EmbedderConfig(); !ok {
+		return &ValidationError{Name: "embedder_config", err: errors.New(`ent: missing required field "Collection.embedder_config"`)}
 	}
 	return nil
 }
@@ -152,13 +161,17 @@ func (cc *CollectionCreate) createSpec() (*Collection, *sqlgraph.CreateSpec) {
 		_spec.SetField(collection.FieldDataType, field.TypeString, value)
 		_node.DataType = value
 	}
-	if value, ok := cc.mutation.Embedder(); ok {
-		_spec.SetField(collection.FieldEmbedder, field.TypeString, value)
-		_node.Embedder = value
+	if value, ok := cc.mutation.EmbedderType(); ok {
+		_spec.SetField(collection.FieldEmbedderType, field.TypeString, value)
+		_node.EmbedderType = value
 	}
 	if value, ok := cc.mutation.IndexParams(); ok {
 		_spec.SetField(collection.FieldIndexParams, field.TypeJSON, value)
 		_node.IndexParams = value
+	}
+	if value, ok := cc.mutation.EmbedderConfig(); ok {
+		_spec.SetField(collection.FieldEmbedderConfig, field.TypeJSON, value)
+		_node.EmbedderConfig = value
 	}
 	if nodes := cc.mutation.FilesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

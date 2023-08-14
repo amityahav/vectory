@@ -681,13 +681,15 @@ definitions:
         index_type:
           type: string
           example: disk_ann
-        embedder:
+        embedder_type:
           type: string
-          example: text2vec
+          example: text2vec-huggingface
         data_type:
           type: string
           example: text
         index_params:
+          type: object
+        embedder_config:
           type: object
     CollectionCreated:
       type: object

@@ -1,8 +1,9 @@
 package db
 
 import (
-	"Vectory/entities"
 	"Vectory/entities/collection"
+	"Vectory/entities/distance"
+	"Vectory/entities/index"
 	"Vectory/entities/objstore"
 	bufio2 "bufio"
 	"context"
@@ -31,13 +32,13 @@ func TestCollection(t *testing.T) {
 		Name:      "test_collection",
 		IndexType: "hnsw",
 		DataType:  "text",
-		IndexParams: collection.HnswParams{
+		IndexParams: index.HnswParams{
 			M:              64,
 			MMax:           128,
 			EfConstruction: 100,
 			Ef:             100,
 			Heuristic:      true,
-			DistanceType:   entities.Euclidean,
+			DistanceType:   distance.Euclidean,
 		},
 	})
 	require.NoError(t, err)
@@ -87,13 +88,13 @@ func BenchmarkCollection_InsertBatch(b *testing.B) {
 		Name:      "test_collection",
 		IndexType: "hnsw",
 		DataType:  "text",
-		IndexParams: collection.HnswParams{
+		IndexParams: index.HnswParams{
 			M:              64,
 			MMax:           128,
 			EfConstruction: 400,
 			Ef:             100,
 			Heuristic:      true,
-			DistanceType:   entities.Euclidean,
+			DistanceType:   distance.Euclidean,
 		},
 	})
 	require.NoError(b, err)
@@ -135,13 +136,13 @@ func BenchmarkCollection_InsertBatch2(b *testing.B) {
 		Name:      "test_collection",
 		IndexType: "hnsw",
 		DataType:  "text",
-		IndexParams: collection.HnswParams{
+		IndexParams: index.HnswParams{
 			M:              64,
 			MMax:           128,
 			EfConstruction: 400,
 			Ef:             100,
 			Heuristic:      true,
-			DistanceType:   entities.Euclidean,
+			DistanceType:   distance.Euclidean,
 		},
 	})
 	require.NoError(b, err)

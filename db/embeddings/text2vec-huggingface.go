@@ -1,6 +1,8 @@
 package embeddings
 
 import (
+	"Vectory/entities/embeddings/hugging_face"
+	"Vectory/entities/embeddings/hugging_face/text2vec"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -8,29 +10,12 @@ import (
 	"net/http"
 )
 
-const (
-	Text2VecHuggingFace = "text2vec-huggingface"
-	BaseURL             = "https://api-inference.huggingface.co"
-	Path                = "pipeline/feature-extraction"
-)
-
 type text2vecEmbedder struct {
 	client *http.Client
-	config *text2vecEmbedderConfig
+	config *text2vec.Config
 }
 
-type text2vecEmbedderConfig struct {
-	ModelName string `json:"model_name"`
-	ApiKey    string `json:"api_key"`
-}
-
-type EmbeddingRequest struct {
-	Inputs []string `json:"inputs"`
-}
-
-type EmbeddingResponse [][]float32
-
-func newText2vecEmbedder(cfg *text2vecEmbedderConfig) *text2vecEmbedder {
+func NewText2vecEmbedder(cfg *text2vec.Config) *text2vecEmbedder {
 	e := text2vecEmbedder{
 		client: http.DefaultClient,
 		config: cfg,
@@ -40,7 +25,7 @@ func newText2vecEmbedder(cfg *text2vecEmbedderConfig) *text2vecEmbedder {
 }
 
 func (e *text2vecEmbedder) Embed(ctx context.Context, inputs []string) ([][]float32, error) {
-	body := EmbeddingRequest{
+	body := text2vec.EmbeddingRequest{
 		Inputs: inputs,
 	}
 
@@ -59,7 +44,7 @@ func (e *text2vecEmbedder) Embed(ctx context.Context, inputs []string) ([][]floa
 		return nil, err
 	}
 
-	var er EmbeddingResponse
+	var er text2vec.EmbeddingResponse
 	if err = json.NewDecoder(res.Body).Decode(&er); err != nil {
 		return nil, err
 	}
@@ -68,5 +53,5 @@ func (e *text2vecEmbedder) Embed(ctx context.Context, inputs []string) ([][]floa
 }
 
 func (e *text2vecEmbedder) GetURL() string {
-	return fmt.Sprintf("%s/%s/%s", BaseURL, Path, e.config.ModelName)
+	return fmt.Sprintf("%s/%s/%s", hugging_face.BaseURL, hugging_face.Path, text2vec.ModelName)
 }

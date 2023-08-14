@@ -5,8 +5,9 @@ import (
 	"Vectory/db/core/index/hnsw"
 	"Vectory/db/core/objstore"
 	"Vectory/db/embeddings"
-	"Vectory/entities"
 	"Vectory/entities/collection"
+	"Vectory/entities/embeddings/hugging_face/text2vec"
+	indexentities "Vectory/entities/index"
 	"encoding/json"
 	"fmt"
 	"github.com/alitto/pond"
@@ -34,7 +35,6 @@ func newCollection(id int, cfg *collection.Collection, filesPath string) (*Colle
 		id:       id,
 		name:     cfg.Name,
 		dataType: cfg.DataType,
-		embedder: nil,
 		wp:       pond.New(runtime.NumCPU(), 1000), // TODO: should be configurable
 		config:   *cfg,
 	}
@@ -56,10 +56,10 @@ func newCollection(id int, cfg *collection.Collection, filesPath string) (*Colle
 	c.idCounter = counter
 
 	switch cfg.IndexType {
-	case entities.Hnsw:
-		var params collection.HnswParams
+	case indexentities.Hnsw:
+		var params indexentities.HnswParams
 
-		b, _ := json.Marshal(cfg.IndexParams) // validated in wrapper functions
+		b, _ := json.Marshal(cfg.IndexParams) // validated in wrapper function
 		_ = json.Unmarshal(b, &params)
 
 		idx, err := hnsw.NewHnsw(params, c.filesPath, os)
@@ -70,6 +70,16 @@ func newCollection(id int, cfg *collection.Collection, filesPath string) (*Colle
 		c.vectorIndex = idx
 	default:
 		return nil, ErrUnknownIndexType
+	}
+
+	switch cfg.EmbedderType {
+	case text2vec.Text2VecHuggingFace:
+		var config text2vec.Config
+
+		b, _ := json.Marshal(cfg.EmbedderConfig) // validated in wrapper function
+		_ = json.Unmarshal(b, &config)
+
+		c.embedder = embeddings.NewText2vecEmbedder(&config)
 	}
 
 	return &c, nil

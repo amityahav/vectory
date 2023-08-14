@@ -108,11 +108,12 @@ func (db *DB) init() error {
 
 	for _, col := range cols {
 		c, err := newCollection(col.ID, &collection.Collection{
-			Name:        col.Name,
-			IndexType:   col.IndexType,
-			Embedder:    col.Embedder,
-			DataType:    col.DataType,
-			IndexParams: col.IndexParams,
+			Name:           col.Name,
+			IndexType:      col.IndexType,
+			EmbedderType:   col.EmbedderType,
+			IndexParams:    col.IndexParams,
+			EmbedderConfig: col.EmbedderConfig,
+			DataType:       col.DataType,
 		}, db.filesPath)
 
 		if err != nil {

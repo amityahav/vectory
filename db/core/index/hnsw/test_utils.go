@@ -1,8 +1,8 @@
 package hnsw
 
 import (
-	"Vectory/entities"
-	"Vectory/entities/collection"
+	"Vectory/entities/distance"
+	"Vectory/entities/index"
 	bufio2 "bufio"
 	"encoding/binary"
 	"io"
@@ -19,13 +19,13 @@ type job struct {
 }
 
 func newHnsw(filesPath string) (*Hnsw, error) {
-	return NewHnsw(collection.HnswParams{
+	return NewHnsw(index.HnswParams{
 		M:              8,
 		MMax:           16,
 		EfConstruction: 400,
 		Ef:             100,
 		Heuristic:      true,
-		DistanceType:   entities.Euclidean,
+		DistanceType:   distance.Euclidean,
 	}, filesPath, nil)
 }
 

@@ -31,21 +31,22 @@ const (
 // CollectionMutation represents an operation that mutates the Collection nodes in the graph.
 type CollectionMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *int
-	name          *string
-	index_type    *string
-	data_type     *string
-	embedder      *string
-	index_params  *map[string]interface{}
-	clearedFields map[string]struct{}
-	files         map[int]struct{}
-	removedfiles  map[int]struct{}
-	clearedfiles  bool
-	done          bool
-	oldValue      func(context.Context) (*Collection, error)
-	predicates    []predicate.Collection
+	op              Op
+	typ             string
+	id              *int
+	name            *string
+	index_type      *string
+	data_type       *string
+	embedder_type   *string
+	index_params    *map[string]interface{}
+	embedder_config *map[string]interface{}
+	clearedFields   map[string]struct{}
+	files           map[int]struct{}
+	removedfiles    map[int]struct{}
+	clearedfiles    bool
+	done            bool
+	oldValue        func(context.Context) (*Collection, error)
+	predicates      []predicate.Collection
 }
 
 var _ ent.Mutation = (*CollectionMutation)(nil)
@@ -254,40 +255,40 @@ func (m *CollectionMutation) ResetDataType() {
 	m.data_type = nil
 }
 
-// SetEmbedder sets the "embedder" field.
-func (m *CollectionMutation) SetEmbedder(s string) {
-	m.embedder = &s
+// SetEmbedderType sets the "embedder_type" field.
+func (m *CollectionMutation) SetEmbedderType(s string) {
+	m.embedder_type = &s
 }
 
-// Embedder returns the value of the "embedder" field in the mutation.
-func (m *CollectionMutation) Embedder() (r string, exists bool) {
-	v := m.embedder
+// EmbedderType returns the value of the "embedder_type" field in the mutation.
+func (m *CollectionMutation) EmbedderType() (r string, exists bool) {
+	v := m.embedder_type
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldEmbedder returns the old "embedder" field's value of the Collection entity.
+// OldEmbedderType returns the old "embedder_type" field's value of the Collection entity.
 // If the Collection object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CollectionMutation) OldEmbedder(ctx context.Context) (v string, err error) {
+func (m *CollectionMutation) OldEmbedderType(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldEmbedder is only allowed on UpdateOne operations")
+		return v, errors.New("OldEmbedderType is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldEmbedder requires an ID field in the mutation")
+		return v, errors.New("OldEmbedderType requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldEmbedder: %w", err)
+		return v, fmt.Errorf("querying old value for OldEmbedderType: %w", err)
 	}
-	return oldValue.Embedder, nil
+	return oldValue.EmbedderType, nil
 }
 
-// ResetEmbedder resets all changes to the "embedder" field.
-func (m *CollectionMutation) ResetEmbedder() {
-	m.embedder = nil
+// ResetEmbedderType resets all changes to the "embedder_type" field.
+func (m *CollectionMutation) ResetEmbedderType() {
+	m.embedder_type = nil
 }
 
 // SetIndexParams sets the "index_params" field.
@@ -324,6 +325,42 @@ func (m *CollectionMutation) OldIndexParams(ctx context.Context) (v map[string]i
 // ResetIndexParams resets all changes to the "index_params" field.
 func (m *CollectionMutation) ResetIndexParams() {
 	m.index_params = nil
+}
+
+// SetEmbedderConfig sets the "embedder_config" field.
+func (m *CollectionMutation) SetEmbedderConfig(value map[string]interface{}) {
+	m.embedder_config = &value
+}
+
+// EmbedderConfig returns the value of the "embedder_config" field in the mutation.
+func (m *CollectionMutation) EmbedderConfig() (r map[string]interface{}, exists bool) {
+	v := m.embedder_config
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmbedderConfig returns the old "embedder_config" field's value of the Collection entity.
+// If the Collection object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CollectionMutation) OldEmbedderConfig(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEmbedderConfig is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEmbedderConfig requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmbedderConfig: %w", err)
+	}
+	return oldValue.EmbedderConfig, nil
+}
+
+// ResetEmbedderConfig resets all changes to the "embedder_config" field.
+func (m *CollectionMutation) ResetEmbedderConfig() {
+	m.embedder_config = nil
 }
 
 // AddFileIDs adds the "files" edge to the File entity by ids.
@@ -414,7 +451,7 @@ func (m *CollectionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CollectionMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 6)
 	if m.name != nil {
 		fields = append(fields, collection.FieldName)
 	}
@@ -424,11 +461,14 @@ func (m *CollectionMutation) Fields() []string {
 	if m.data_type != nil {
 		fields = append(fields, collection.FieldDataType)
 	}
-	if m.embedder != nil {
-		fields = append(fields, collection.FieldEmbedder)
+	if m.embedder_type != nil {
+		fields = append(fields, collection.FieldEmbedderType)
 	}
 	if m.index_params != nil {
 		fields = append(fields, collection.FieldIndexParams)
+	}
+	if m.embedder_config != nil {
+		fields = append(fields, collection.FieldEmbedderConfig)
 	}
 	return fields
 }
@@ -444,10 +484,12 @@ func (m *CollectionMutation) Field(name string) (ent.Value, bool) {
 		return m.IndexType()
 	case collection.FieldDataType:
 		return m.DataType()
-	case collection.FieldEmbedder:
-		return m.Embedder()
+	case collection.FieldEmbedderType:
+		return m.EmbedderType()
 	case collection.FieldIndexParams:
 		return m.IndexParams()
+	case collection.FieldEmbedderConfig:
+		return m.EmbedderConfig()
 	}
 	return nil, false
 }
@@ -463,10 +505,12 @@ func (m *CollectionMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldIndexType(ctx)
 	case collection.FieldDataType:
 		return m.OldDataType(ctx)
-	case collection.FieldEmbedder:
-		return m.OldEmbedder(ctx)
+	case collection.FieldEmbedderType:
+		return m.OldEmbedderType(ctx)
 	case collection.FieldIndexParams:
 		return m.OldIndexParams(ctx)
+	case collection.FieldEmbedderConfig:
+		return m.OldEmbedderConfig(ctx)
 	}
 	return nil, fmt.Errorf("unknown Collection field %s", name)
 }
@@ -497,12 +541,12 @@ func (m *CollectionMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetDataType(v)
 		return nil
-	case collection.FieldEmbedder:
+	case collection.FieldEmbedderType:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetEmbedder(v)
+		m.SetEmbedderType(v)
 		return nil
 	case collection.FieldIndexParams:
 		v, ok := value.(map[string]interface{})
@@ -510,6 +554,13 @@ func (m *CollectionMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetIndexParams(v)
+		return nil
+	case collection.FieldEmbedderConfig:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmbedderConfig(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Collection field %s", name)
@@ -569,11 +620,14 @@ func (m *CollectionMutation) ResetField(name string) error {
 	case collection.FieldDataType:
 		m.ResetDataType()
 		return nil
-	case collection.FieldEmbedder:
-		m.ResetEmbedder()
+	case collection.FieldEmbedderType:
+		m.ResetEmbedderType()
 		return nil
 	case collection.FieldIndexParams:
 		m.ResetIndexParams()
+		return nil
+	case collection.FieldEmbedderConfig:
+		m.ResetEmbedderConfig()
 		return nil
 	}
 	return fmt.Errorf("unknown Collection field %s", name)

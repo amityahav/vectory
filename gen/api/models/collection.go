@@ -21,14 +21,17 @@ type Collection struct {
 	// index type
 	IndexType string `json:"index_type,omitempty"`
 
-	// embedder
-	Embedder string `json:"embedder,omitempty"`
+	// embedder type
+	EmbedderType string `json:"embedder_type,omitempty"`
 
 	// data type
 	DataType string `json:"data_type,omitempty"`
 
 	// index params
 	IndexParams interface{} `json:"index_params,omitempty"`
+
+	// embedder config
+	EmbedderConfig interface{} `json:"embedder_config,omitempty"`
 }
 
 // Validate validates this collection

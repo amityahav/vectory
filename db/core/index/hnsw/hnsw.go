@@ -5,8 +5,8 @@ import (
 	"Vectory/db/core/index/distance"
 	"Vectory/db/core/index/utils"
 	"Vectory/db/core/objstore"
-	"Vectory/entities"
-	"Vectory/entities/collection"
+	distanceentities "Vectory/entities/distance"
+	indexentities "Vectory/entities/index"
 	"fmt"
 	"math"
 	"sync"
@@ -32,7 +32,7 @@ type Hnsw struct {
 	wal              *wal
 }
 
-func NewHnsw(params collection.HnswParams, filesPath string, store *objstore.ObjectStore) (*Hnsw, error) {
+func NewHnsw(params indexentities.HnswParams, filesPath string, store *objstore.ObjectStore) (*Hnsw, error) {
 	h := Hnsw{
 		m:                params.M,
 		mMax:             params.MMax,
@@ -47,9 +47,9 @@ func NewHnsw(params collection.HnswParams, filesPath string, store *objstore.Obj
 	h.mL = 1 / math.Log(float64(h.m))
 
 	switch params.DistanceType {
-	case entities.DotProduct:
+	case distanceentities.DotProduct:
 		h.distFunc = distance.Dot
-	case entities.Euclidean:
+	case distanceentities.Euclidean:
 		h.distFunc = distance.EuclideanDistance
 	}
 

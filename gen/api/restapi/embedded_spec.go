@@ -135,10 +135,14 @@ func init() {
           "x-order": 3,
           "example": "text"
         },
-        "embedder": {
+        "embedder_config": {
+          "type": "object",
+          "x-order": 5
+        },
+        "embedder_type": {
           "type": "string",
           "x-order": 2,
-          "example": "text2vec"
+          "example": "text2vec-huggingface"
         },
         "index_params": {
           "type": "object",
@@ -285,10 +289,14 @@ func init() {
           "x-order": 3,
           "example": "text"
         },
-        "embedder": {
+        "embedder_config": {
+          "type": "object",
+          "x-order": 5
+        },
+        "embedder_type": {
           "type": "string",
           "x-order": 2,
-          "example": "text2vec"
+          "example": "text2vec-huggingface"
         },
         "index_params": {
           "type": "object",

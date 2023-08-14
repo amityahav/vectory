@@ -21,6 +21,7 @@ func (h *CollectionHandler) initHandlers(api *operations.VectoryAPI) {
 	api.CollectionDeleteCollectionHandler = collection.DeleteCollectionHandlerFunc(h.deleteCollection)
 }
 
+// getCollection handler for getting collection configuration
 func (h *CollectionHandler) getCollection(params collection.GetCollectionParams) middleware.Responder {
 	ctx := params.HTTPRequest.Context()
 
@@ -37,25 +38,28 @@ func (h *CollectionHandler) getCollection(params collection.GetCollectionParams)
 	cfg := c.GetConfig()
 
 	col := models.Collection{
-		Name:        cfg.Name,
-		IndexType:   cfg.IndexType,
-		Embedder:    cfg.Embedder,
-		DataType:    cfg.DataType,
-		IndexParams: cfg.IndexParams,
+		Name:           cfg.Name,
+		IndexType:      cfg.IndexType,
+		EmbedderType:   cfg.EmbedderType,
+		IndexParams:    cfg.IndexParams,
+		EmbedderConfig: cfg.EmbedderConfig,
+		DataType:       cfg.DataType,
 	}
 
 	return collection.NewGetCollectionOK().WithPayload(&col)
 }
 
+// addCollection handler for adding a new collection to Vectory
 func (h *CollectionHandler) addCollection(params collection.AddCollectionParams) middleware.Responder {
 	ctx := params.HTTPRequest.Context()
 
 	cfg := collectionent.Collection{
-		Name:        params.Collection.Name,
-		IndexType:   params.Collection.IndexType,
-		Embedder:    params.Collection.Embedder,
-		DataType:    params.Collection.DataType,
-		IndexParams: params.Collection.IndexParams,
+		Name:           params.Collection.Name,
+		IndexType:      params.Collection.IndexType,
+		EmbedderType:   params.Collection.EmbedderType,
+		IndexParams:    params.Collection.IndexParams,
+		EmbedderConfig: params.Collection.EmbedderConfig,
+		DataType:       params.Collection.DataType,
 	}
 
 	_, err := h.db.CreateCollection(ctx, &cfg)
@@ -71,6 +75,7 @@ func (h *CollectionHandler) addCollection(params collection.AddCollectionParams)
 	return collection.NewAddCollectionCreated().WithPayload(&models.CollectionCreated{CollectionName: cfg.Name})
 }
 
+// deleteCollection handler for deleting a collection from Vectory
 func (h *CollectionHandler) deleteCollection(params collection.DeleteCollectionParams) middleware.Responder {
 	ctx := params.HTTPRequest.Context()
 

@@ -23,10 +23,12 @@ type Collection struct {
 	IndexType string `json:"index_type,omitempty"`
 	// DataType holds the value of the "data_type" field.
 	DataType string `json:"data_type,omitempty"`
-	// Embedder holds the value of the "embedder" field.
-	Embedder string `json:"embedder,omitempty"`
+	// EmbedderType holds the value of the "embedder_type" field.
+	EmbedderType string `json:"embedder_type,omitempty"`
 	// IndexParams holds the value of the "index_params" field.
 	IndexParams map[string]interface{} `json:"index_params,omitempty"`
+	// EmbedderConfig holds the value of the "embedder_config" field.
+	EmbedderConfig map[string]interface{} `json:"embedder_config,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the CollectionQuery when eager-loading is set.
 	Edges        CollectionEdges `json:"edges"`
@@ -56,11 +58,11 @@ func (*Collection) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case collection.FieldIndexParams:
+		case collection.FieldIndexParams, collection.FieldEmbedderConfig:
 			values[i] = new([]byte)
 		case collection.FieldID:
 			values[i] = new(sql.NullInt64)
-		case collection.FieldName, collection.FieldIndexType, collection.FieldDataType, collection.FieldEmbedder:
+		case collection.FieldName, collection.FieldIndexType, collection.FieldDataType, collection.FieldEmbedderType:
 			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -101,11 +103,11 @@ func (c *Collection) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				c.DataType = value.String
 			}
-		case collection.FieldEmbedder:
+		case collection.FieldEmbedderType:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field embedder", values[i])
+				return fmt.Errorf("unexpected type %T for field embedder_type", values[i])
 			} else if value.Valid {
-				c.Embedder = value.String
+				c.EmbedderType = value.String
 			}
 		case collection.FieldIndexParams:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -113,6 +115,14 @@ func (c *Collection) assignValues(columns []string, values []any) error {
 			} else if value != nil && len(*value) > 0 {
 				if err := json.Unmarshal(*value, &c.IndexParams); err != nil {
 					return fmt.Errorf("unmarshal field index_params: %w", err)
+				}
+			}
+		case collection.FieldEmbedderConfig:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field embedder_config", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &c.EmbedderConfig); err != nil {
+					return fmt.Errorf("unmarshal field embedder_config: %w", err)
 				}
 			}
 		default:
@@ -165,11 +175,14 @@ func (c *Collection) String() string {
 	builder.WriteString("data_type=")
 	builder.WriteString(c.DataType)
 	builder.WriteString(", ")
-	builder.WriteString("embedder=")
-	builder.WriteString(c.Embedder)
+	builder.WriteString("embedder_type=")
+	builder.WriteString(c.EmbedderType)
 	builder.WriteString(", ")
 	builder.WriteString("index_params=")
 	builder.WriteString(fmt.Sprintf("%v", c.IndexParams))
+	builder.WriteString(", ")
+	builder.WriteString("embedder_config=")
+	builder.WriteString(fmt.Sprintf("%v", c.EmbedderConfig))
 	builder.WriteByte(')')
 	return builder.String()
 }

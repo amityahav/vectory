@@ -18,10 +18,12 @@ const (
 	FieldIndexType = "index_type"
 	// FieldDataType holds the string denoting the data_type field in the database.
 	FieldDataType = "data_type"
-	// FieldEmbedder holds the string denoting the embedder field in the database.
-	FieldEmbedder = "embedder"
+	// FieldEmbedderType holds the string denoting the embedder_type field in the database.
+	FieldEmbedderType = "embedder_type"
 	// FieldIndexParams holds the string denoting the index_params field in the database.
 	FieldIndexParams = "index_params"
+	// FieldEmbedderConfig holds the string denoting the embedder_config field in the database.
+	FieldEmbedderConfig = "embedder_config"
 	// EdgeFiles holds the string denoting the files edge name in mutations.
 	EdgeFiles = "files"
 	// Table holds the table name of the collection in the database.
@@ -41,8 +43,9 @@ var Columns = []string{
 	FieldName,
 	FieldIndexType,
 	FieldDataType,
-	FieldEmbedder,
+	FieldEmbedderType,
 	FieldIndexParams,
+	FieldEmbedderConfig,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -78,9 +81,9 @@ func ByDataType(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDataType, opts...).ToFunc()
 }
 
-// ByEmbedder orders the results by the embedder field.
-func ByEmbedder(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldEmbedder, opts...).ToFunc()
+// ByEmbedderType orders the results by the embedder_type field.
+func ByEmbedderType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEmbedderType, opts...).ToFunc()
 }
 
 // ByFilesCount orders the results by files count.
