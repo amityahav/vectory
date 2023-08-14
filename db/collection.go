@@ -4,6 +4,7 @@ import (
 	"Vectory/db/core/index"
 	"Vectory/db/core/index/hnsw"
 	"Vectory/db/core/objstore"
+	"Vectory/db/embeddings"
 	"Vectory/entities"
 	"Vectory/entities/collection"
 	"encoding/json"
@@ -22,7 +23,7 @@ type Collection struct {
 	vectorIndex index.VectorIndex
 	idCounter   *IdCounter
 	logger      any
-	embedder    any
+	embedder    embeddings.Embedder
 	wp          *pond.WorkerPool
 	filesPath   string
 	config      collection.Collection
@@ -47,7 +48,7 @@ func newCollection(id int, cfg *collection.Collection, filesPath string) (*Colle
 
 	c.objStore = os
 
-	counter, err := NewIdCounter(c.filesPath)
+	counter, err := newIdCounter(c.filesPath)
 	if err != nil {
 		return nil, err
 	}
@@ -61,12 +62,12 @@ func newCollection(id int, cfg *collection.Collection, filesPath string) (*Colle
 		b, _ := json.Marshal(cfg.IndexParams) // validated in wrapper functions
 		_ = json.Unmarshal(b, &params)
 
-		index, err := hnsw.NewHnsw(params, c.filesPath, os)
+		idx, err := hnsw.NewHnsw(params, c.filesPath, os)
 		if err != nil {
 			return nil, err
 		}
 
-		c.vectorIndex = index
+		c.vectorIndex = idx
 	default:
 		return nil, ErrUnknownIndexType
 	}

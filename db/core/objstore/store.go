@@ -13,9 +13,6 @@ type ObjectStore struct {
 	db *bitcask.Bitcask
 }
 
-type ObjectStatus struct {
-}
-
 func NewObjectStore(filesPath string) (*ObjectStore, error) {
 	db, err := bitcask.Open(filesPath + "/" + storeDir)
 	if err != nil {

@@ -14,7 +14,7 @@ type IdCounter struct {
 	file  *os.File
 }
 
-func NewIdCounter(filesPath string) (*IdCounter, error) {
+func newIdCounter(filesPath string) (*IdCounter, error) {
 	file, err := os.OpenFile(filesPath+"/"+fileName, os.O_RDWR|os.O_CREATE, 0o666)
 	if err != nil {
 		return nil, err

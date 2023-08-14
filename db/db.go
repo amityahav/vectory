@@ -18,7 +18,7 @@ type DB struct {
 	filesPath       string
 }
 
-// Open initialises Vectory and init collections and additional metadata if exists
+// Open initialises Vectory and init collections and additional metadata if exists.
 func Open(filesPath string) (*DB, error) {
 	db := DB{
 		logger:    logrus.New(),
@@ -33,7 +33,7 @@ func Open(filesPath string) (*DB, error) {
 	return &db, nil
 }
 
-// CreateCollection creates a new collection in the database and cache it in memory
+// CreateCollection creates a new collection in the database and cache it in memory.
 func (db *DB) CreateCollection(ctx context.Context, cfg *collection.Collection) (*Collection, error) {
 	err := collection.Validate(cfg)
 	if err != nil {
@@ -59,7 +59,7 @@ func (db *DB) CreateCollection(ctx context.Context, cfg *collection.Collection) 
 	return c, nil
 }
 
-// DeleteCollection deletes collection both on disk and memory
+// DeleteCollection deletes collection both on disk and memory.
 func (db *DB) DeleteCollection(ctx context.Context, name string) error {
 	// TODO: handle case where deleting and another user has ref to the collection trying accessing removed files
 	if _, ok := db.collections.Load(name); !ok {
@@ -76,7 +76,7 @@ func (db *DB) DeleteCollection(ctx context.Context, name string) error {
 	return nil
 }
 
-// GetCollection returns the collection with name
+// GetCollection returns the collection with name.
 func (db *DB) GetCollection(ctx context.Context, name string) (*Collection, error) {
 	c, ok := db.collections.Load(name)
 	if !ok {
@@ -86,7 +86,7 @@ func (db *DB) GetCollection(ctx context.Context, name string) (*Collection, erro
 	return c.(*Collection), nil
 }
 
-// init collections and metadata to memory
+// init collections and metadata to memory.
 func (db *DB) init() error {
 	ctx := context.Background()
 
