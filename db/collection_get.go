@@ -2,13 +2,15 @@ package db
 
 import (
 	objstoreentities "Vectory/entities/objstore"
+	"context"
 	"github.com/pkg/errors"
 )
 
+// Get returns the objects with objIds from the collection.
 func (c *Collection) Get(objIds []uint64) ([]objstoreentities.Object, error) {
 	objects := make([]objstoreentities.Object, 0, len(objIds))
 	for _, id := range objIds {
-		obj, found, err := c.objStore.Get(id)
+		obj, found, err := c.objStore.GetObject(id)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting %d from object store", id)
 		}
@@ -23,6 +25,18 @@ func (c *Collection) Get(objIds []uint64) ([]objstoreentities.Object, error) {
 	return objects, nil
 }
 
-func (c *Collection) SemanticSearch(obj *objstoreentities.Object, k int) {
-	// TODO: create embeddings from obj and get K-NN and then retrieve object ids from objStore
+// SemanticSearch returns the approximate k-nn of obj.
+func (c *Collection) SemanticSearch(ctx context.Context, obj *objstoreentities.Object, k int) ([]*objstoreentities.Object, error) {
+	if err := c.embedObjectsIfNeeded(ctx, []*objstoreentities.Object{obj}); err != nil {
+		return nil, err
+	}
+
+	results := c.vectorIndex.Search(obj.Vector, k)
+	ids := make([]uint64, 0, k)
+
+	for _, e := range results {
+		ids = append(ids, e.Id)
+	}
+
+	return c.objStore.GetObjects(ids) // TODO: support returning distances, vectors of objects as well
 }

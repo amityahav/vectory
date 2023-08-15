@@ -1,6 +1,7 @@
 package collection
 
 import (
+	"Vectory/db/embeddings"
 	"Vectory/entities/embeddings/hugging_face/text2vec"
 	"Vectory/entities/index"
 	"errors"
@@ -26,7 +27,9 @@ func Validate(cfg *Collection) error {
 	}
 
 	switch cfg.EmbedderType {
-	case text2vec.Text2VecHuggingFace:
+	case "": // no use of embedder, user should provide his own vectors
+	case text2vec.Text2VecHuggingFace: // TODO: validate embedder config
+	case embeddings.FakeEmbedder:
 	default:
 		return ErrEmbedderTypeUnsupported
 	}

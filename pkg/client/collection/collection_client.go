@@ -111,7 +111,7 @@ func (a *Client) DeleteCollection(params *DeleteCollectionParams) (*DeleteCollec
 /*
   GetCollection gets collection information
 
-  Get collection information
+  GetObject collection information
 */
 func (a *Client) GetCollection(params *GetCollectionParams) (*GetCollectionOK, error) {
 	// TODO: Validate the params before sending

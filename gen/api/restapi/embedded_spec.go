@@ -60,11 +60,11 @@ func init() {
     },
     "/v1/collection/{collectionName}": {
       "get": {
-        "description": "Get collection information",
+        "description": "GetObject collection information",
         "tags": [
           "collection"
         ],
-        "summary": "Get collection information",
+        "summary": "GetObject collection information",
         "operationId": "getCollection",
         "parameters": [
           {
@@ -214,11 +214,11 @@ func init() {
     },
     "/v1/collection/{collectionName}": {
       "get": {
-        "description": "Get collection information",
+        "description": "GetObject collection information",
         "tags": [
           "collection"
         ],
-        "summary": "Get collection information",
+        "summary": "GetObject collection information",
         "operationId": "getCollection",
         "parameters": [
           {

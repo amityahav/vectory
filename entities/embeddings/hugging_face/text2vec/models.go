@@ -2,7 +2,7 @@ package text2vec
 
 const (
 	Text2VecHuggingFace = "text2vec-huggingface"
-	ModelName           = "msmarco-bert-base-dot-v5"
+	ModelName           = "sentence-transformers/msmarco-bert-base-dot-v5"
 )
 
 type Config struct {

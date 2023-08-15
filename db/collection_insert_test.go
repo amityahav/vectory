@@ -1,8 +1,10 @@
 package db
 
 import (
+	"Vectory/db/embeddings"
 	"Vectory/entities/collection"
 	"Vectory/entities/distance"
+	"Vectory/entities/embeddings/hugging_face/text2vec"
 	"Vectory/entities/index"
 	"Vectory/entities/objstore"
 	bufio2 "bufio"
@@ -21,54 +23,124 @@ import (
 )
 
 func TestCollection(t *testing.T) {
+	ctx := context.Background()
 	filesPath := "./tmp"
 
-	ctx := context.Background()
 	db, err := Open(filesPath)
 	require.NoError(t, err)
 	defer os.RemoveAll(filesPath)
 
-	c, err := db.CreateCollection(ctx, &collection.Collection{
-		Name:      "test_collection",
-		IndexType: "hnsw",
-		DataType:  "text",
-		IndexParams: index.HnswParams{
-			M:              64,
-			MMax:           128,
-			EfConstruction: 100,
-			Ef:             100,
-			Heuristic:      true,
-			DistanceType:   distance.Euclidean,
-		},
-	})
-	require.NoError(t, err)
-
-	objects := make([]objstore.Object, 0, 1000)
-	ids := make([]uint64, 0, 1000)
-	t.Run("insertion with vectors", func(t *testing.T) {
-		for i := 0; i < 1000; i++ {
-			o := objstore.Object{
-				Data:   fmt.Sprintf("%d", i),
-				Vector: randomVector(128),
-			}
-
-			err = c.Insert(&o)
-			require.NoError(t, err)
-
-			o.Id = uint64(i)
-			objects = append(objects, o)
-			ids = append(ids, o.Id)
-		}
-	})
-
-	t.Run("get inserted objects", func(t *testing.T) {
-		objs, err := c.Get(ids)
+	{
+		c, err := db.CreateCollection(ctx, &collection.Collection{
+			Name:      "test_collection",
+			IndexType: index.Hnsw,
+			DataType:  "text",
+			IndexParams: index.HnswParams{
+				M:              64,
+				MMax:           128,
+				EfConstruction: 100,
+				Ef:             100,
+				Heuristic:      true,
+				DistanceType:   distance.Euclidean,
+			},
+		})
 		require.NoError(t, err)
 
-		for i, o := range objects {
-			require.Equal(t, o, objs[i])
-		}
-	})
+		objects := make([]objstore.Object, 0, 100)
+		ids := make([]uint64, 0, 100)
+		t.Run("sequential insertion with vectors", func(t *testing.T) {
+			for i := 0; i < 100; i++ {
+				o := objstore.Object{
+					Data:   fmt.Sprintf("%d", i),
+					Vector: randomVector(128),
+				}
+
+				err = c.Insert(ctx, &o)
+				require.NoError(t, err)
+
+				o.Id = uint64(i)
+				objects = append(objects, o)
+				ids = append(ids, o.Id)
+			}
+		})
+
+		t.Run("get inserted objects", func(t *testing.T) {
+			objs, err := c.Get(ids)
+			require.NoError(t, err)
+
+			for i, o := range objects {
+				require.Equal(t, o, objs[i])
+			}
+		})
+
+		t.Run("insert with no vector and no embedder", func(t *testing.T) {
+			obj := objstore.Object{
+				Data: "test",
+			}
+
+			require.ErrorIs(t, c.Insert(ctx, &obj), ErrMissingVectorAndEmbedder)
+		})
+	}
+
+	{
+		c, err := db.CreateCollection(ctx, &collection.Collection{
+			Name:         "test_collection2",
+			IndexType:    index.Hnsw,
+			EmbedderType: embeddings.FakeEmbedder,
+			DataType:     "text",
+			IndexParams: index.HnswParams{
+				M:              64,
+				MMax:           128,
+				EfConstruction: 100,
+				Ef:             100,
+				Heuristic:      true,
+				DistanceType:   distance.Euclidean,
+			},
+		})
+		require.NoError(t, err)
+
+		t.Run("insert with vector and embedder", func(t *testing.T) {
+			vec := randomVector(128)
+			obj := objstore.Object{
+				Data:   "Hello world",
+				Vector: vec,
+			}
+
+			err = c.Insert(ctx, &obj)
+			require.NoError(t, err)
+			require.Equal(t, vec, obj.Vector)
+
+		})
+
+		t.Run("insert without vector and embedder", func(t *testing.T) {
+			obj := objstore.Object{
+				Data: "Hello world",
+			}
+
+			err = c.Insert(ctx, &obj)
+			require.NoError(t, err)
+			require.NotNil(t, obj.Vector)
+
+		})
+
+		t.Run("InsertBatch with vectors and embedder", func(t *testing.T) {
+			vec := randomVector(128)
+			obj := objstore.Object{
+				Data:   "Hello world",
+				Vector: vec,
+			}
+
+			obj2 := objstore.Object{
+				Data: "Hello world2",
+			}
+
+			err = c.InsertBatch(ctx, []*objstore.Object{&obj, &obj2})
+			require.NoError(t, err)
+			require.Equal(t, vec, obj.Vector)
+			require.NotNil(t, obj2.Vector)
+		})
+	}
+
 }
 
 func BenchmarkCollection_InsertBatch(b *testing.B) {
@@ -86,55 +158,7 @@ func BenchmarkCollection_InsertBatch(b *testing.B) {
 
 	c, err := db.CreateCollection(ctx, &collection.Collection{
 		Name:      "test_collection",
-		IndexType: "hnsw",
-		DataType:  "text",
-		IndexParams: index.HnswParams{
-			M:              64,
-			MMax:           128,
-			EfConstruction: 400,
-			Ef:             100,
-			Heuristic:      true,
-			DistanceType:   distance.Euclidean,
-		},
-	})
-	require.NoError(b, err)
-
-	//dim := 128
-	//objects := make([]*objstore.Object, 10000)
-	//for i := 0; i < len(objects); i++ {
-	//	objects[i] = &objstore.Object{
-	//		Id:     0,
-	//		Data:   "Hello world",
-	//		Vector: randomVector(dim),
-	//	}
-	//}
-
-	objects := loadObjects("./core/index/hnsw/siftsmall/siftsmall_base.fvecs")
-
-	start := time.Now()
-	err = c.InsertBatch(objects)
-	require.NoError(b, err)
-	end := time.Since(start)
-
-	fmt.Printf("batch insertion took: %s\n", end)
-}
-
-func BenchmarkCollection_InsertBatch2(b *testing.B) {
-	defer profile.Start(profile.CPUProfile, profile.ProfilePath("./profile")).Stop()
-	b.ResetTimer()
-	b.ReportAllocs()
-
-	filesPath := "./tmp"
-
-	ctx := context.Background()
-	db, err := Open(filesPath)
-	require.NoError(b, err)
-
-	defer os.RemoveAll(filesPath)
-
-	c, err := db.CreateCollection(ctx, &collection.Collection{
-		Name:      "test_collection",
-		IndexType: "hnsw",
+		IndexType: index.Hnsw,
 		DataType:  "text",
 		IndexParams: index.HnswParams{
 			M:              64,
@@ -157,16 +181,107 @@ func BenchmarkCollection_InsertBatch2(b *testing.B) {
 		}
 	}
 
-	objects = loadObjects("./core/index/hnsw/siftsmall/siftsmall_base.fvecs")
-
-	ch := make(chan *objstore.Object, 10000)
-	for i := 0; i < 10000; i++ {
-		ch <- objects[i]
-	}
-	close(ch)
+	//objects := loadObjects("./core/index/hnsw/siftsmall/siftsmall_base.fvecs")
 
 	start := time.Now()
-	err = c.InsertBatch2(ch)
+	err = c.InsertBatch(ctx, objects)
+	require.NoError(b, err)
+	end := time.Since(start)
+
+	fmt.Printf("batch insertion took: %s\n", end)
+}
+
+func BenchmarkCollection_InsertBatch_WithEmbedder(b *testing.B) {
+	defer profile.Start(profile.CPUProfile, profile.ProfilePath("./profile")).Stop()
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	filesPath := "./tmp"
+
+	ctx := context.Background()
+	db, err := Open(filesPath)
+	require.NoError(b, err)
+
+	defer os.RemoveAll(filesPath)
+
+	c, err := db.CreateCollection(ctx, &collection.Collection{
+		Name:         "test_collection",
+		IndexType:    index.Hnsw,
+		EmbedderType: text2vec.Text2VecHuggingFace,
+		EmbedderConfig: text2vec.Config{
+			ApiKey: os.Getenv("api_key"),
+		},
+		DataType: "text",
+		IndexParams: index.HnswParams{
+			M:              64,
+			MMax:           128,
+			EfConstruction: 400,
+			Ef:             100,
+			Heuristic:      true,
+			DistanceType:   distance.Euclidean,
+		},
+	})
+	require.NoError(b, err)
+
+	objects := make([]*objstore.Object, 1)
+	for i := 0; i < len(objects); i++ {
+		objects[i] = &objstore.Object{
+			Data: fmt.Sprintf("Hello world %d", i),
+		}
+	}
+
+	//objects := loadObjects("./core/index/hnsw/siftsmall/siftsmall_base.fvecs")
+
+	start := time.Now()
+	err = c.InsertBatch(ctx, objects)
+	require.NoError(b, err)
+	end := time.Since(start)
+
+	fmt.Printf("batch insertion took: %s\n", end)
+}
+
+func BenchmarkCollection_InsertBatch2(b *testing.B) {
+	defer profile.Start(profile.CPUProfile, profile.ProfilePath("./profile")).Stop()
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	filesPath := "./tmp"
+
+	ctx := context.Background()
+	db, err := Open(filesPath)
+	require.NoError(b, err)
+
+	defer os.RemoveAll(filesPath)
+
+	c, err := db.CreateCollection(ctx, &collection.Collection{
+		Name:      "test_collection",
+		IndexType: index.Hnsw,
+		DataType:  "text",
+		IndexParams: index.HnswParams{
+			M:              64,
+			MMax:           128,
+			EfConstruction: 400,
+			Ef:             100,
+			Heuristic:      true,
+			DistanceType:   distance.Euclidean,
+		},
+	})
+	require.NoError(b, err)
+
+	dim := 128
+	objects := make([]*objstore.Object, 10000)
+	for i := 0; i < len(objects); i++ {
+		objects[i] = &objstore.Object{
+			Id:     0,
+			Data:   "Hello world",
+			Vector: randomVector(dim),
+		}
+	}
+
+	//objects = loadObjects("./core/index/hnsw/siftsmall/siftsmall_base.fvecs")
+
+	start := time.Now()
+	err = c.InsertBatch2(ctx, objects)
 	require.NoError(b, err)
 	end := time.Since(start)
 

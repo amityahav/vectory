@@ -2,9 +2,10 @@ package db
 
 import "github.com/pkg/errors"
 
+// Delete deletes an object with objId from the collection.
 func (c *Collection) Delete(objId uint64) error {
 	// TODO: delete in objStore and in index
-	_, found, err := c.objStore.Get(objId)
+	_, found, err := c.objStore.GetObject(objId)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting %d from object store", objId)
 	}

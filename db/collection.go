@@ -8,6 +8,8 @@ import (
 	"Vectory/entities/collection"
 	"Vectory/entities/embeddings/hugging_face/text2vec"
 	indexentities "Vectory/entities/index"
+	objstoreentities "Vectory/entities/objstore"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/alitto/pond"
@@ -80,6 +82,8 @@ func newCollection(id int, cfg *collection.Collection, filesPath string) (*Colle
 		_ = json.Unmarshal(b, &config)
 
 		c.embedder = embeddings.NewText2vecEmbedder(&config)
+	case embeddings.FakeEmbedder: // for test purposes
+		c.embedder = embeddings.NewFakeEmbedder()
 	}
 
 	return &c, nil
@@ -87,4 +91,30 @@ func newCollection(id int, cfg *collection.Collection, filesPath string) (*Colle
 
 func (c *Collection) GetConfig() collection.Collection {
 	return c.config
+}
+
+func (c *Collection) embedObjectsIfNeeded(ctx context.Context, objs []*objstoreentities.Object) error {
+	if c.embedder == nil {
+		for _, o := range objs {
+			if o.Vector == nil {
+				return ErrMissingVectorAndEmbedder
+			}
+
+		}
+	} else {
+		filtered := make([]*objstoreentities.Object, 0, len(objs))
+		for _, o := range objs {
+			if o.Vector != nil {
+				continue
+			}
+
+			filtered = append(filtered, o)
+		}
+
+		if err := c.embedder.Embed(ctx, filtered); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

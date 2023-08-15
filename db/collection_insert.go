@@ -5,8 +5,12 @@ import (
 	"context"
 )
 
-// Insert inserts one object to Vectory.
-func (c *Collection) Insert(obj *objstoreentities.Object) error {
+// Insert inserts one object to the collection.
+func (c *Collection) Insert(ctx context.Context, obj *objstoreentities.Object) error {
+	if err := c.embedObjectsIfNeeded(ctx, []*objstoreentities.Object{obj}); err != nil {
+		return err
+	}
+
 	if err := c.insert(obj); err != nil {
 		return err
 	}
@@ -18,12 +22,16 @@ func (c *Collection) Insert(obj *objstoreentities.Object) error {
 	return nil
 }
 
-// InsertBatch inserts a batch of objects to Vectory.
+// InsertBatch inserts a batch of objects to the collection.
 // it does that by splitting the batch into equally sized chunks distributed among multiple worker threads.
-func (c *Collection) InsertBatch(objs []*objstoreentities.Object) error {
+func (c *Collection) InsertBatch(ctx context.Context, objs []*objstoreentities.Object) error {
+	if err := c.embedObjectsIfNeeded(ctx, objs); err != nil {
+		return err
+	}
+
 	workers := c.wp.MaxWorkers()
 	objsInChunk := len(objs) / workers
-	group, ctx := c.wp.GroupContext(context.TODO())
+	group, ctx := c.wp.GroupContext(ctx)
 	defer ctx.Done()
 
 	var offset int
@@ -60,10 +68,19 @@ func (c *Collection) InsertBatch(objs []*objstoreentities.Object) error {
 	return c.vectorIndex.Flush()
 }
 
-// InsertBatch2 is the same as InsertBatch but gets a channel of objects instead.
-// it is the caller responsibility to close the channel when done.
-func (c *Collection) InsertBatch2(objects chan *objstoreentities.Object) error {
-	group, ctx := c.wp.GroupContext(context.TODO())
+// InsertBatch2 is the same as InsertBatch but creates a channel from objs and share it among the worker threads.
+func (c *Collection) InsertBatch2(ctx context.Context, objs []*objstoreentities.Object) error {
+	if err := c.embedObjectsIfNeeded(ctx, objs); err != nil {
+		return err
+	}
+
+	objects := make(chan *objstoreentities.Object, len(objs))
+	for _, o := range objs {
+		objects <- o
+	}
+	close(objects)
+
+	group, ctx := c.wp.GroupContext(ctx)
 	defer ctx.Done()
 
 	for i := 0; i < c.wp.MaxWorkers(); i++ {
@@ -96,10 +113,6 @@ func (c *Collection) InsertBatch2(objects chan *objstoreentities.Object) error {
 // it will also create an embedding for the data if vector is not specified.
 func (c *Collection) insert(obj *objstoreentities.Object) error {
 	// TODO: validate obj data type is the same as collection's
-	if obj.Vector == nil {
-		// TODO: create embedding and store in obj
-	}
-
 	id, err := c.idCounter.FetchAndInc()
 	if err != nil {
 		return err

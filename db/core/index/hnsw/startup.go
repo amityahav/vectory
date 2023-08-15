@@ -36,7 +36,7 @@ func (h *Hnsw) populateVerticesVectors(store *objstore.ObjectStore) error {
 	s := store.GetStore()
 
 	for k := range s.Keys() {
-		o, _, err := store.Get(binary.LittleEndian.Uint64(k))
+		o, _, err := store.GetObject(binary.LittleEndian.Uint64(k))
 		if err != nil {
 			return err
 		}
