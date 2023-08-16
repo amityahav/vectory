@@ -8,6 +8,9 @@ import (
 
 // Get returns the objects with objIds from the collection.
 func (c *Collection) Get(objIds []uint64) ([]objstoreentities.Object, error) {
+	c.RLock()
+	defer c.RUnlock()
+
 	objects := make([]objstoreentities.Object, 0, len(objIds))
 	for _, id := range objIds {
 		obj, found, err := c.objStore.GetObject(id)
@@ -27,6 +30,9 @@ func (c *Collection) Get(objIds []uint64) ([]objstoreentities.Object, error) {
 
 // SemanticSearch returns the approximate k-nn of obj.
 func (c *Collection) SemanticSearch(ctx context.Context, obj *objstoreentities.Object, k int) ([]*objstoreentities.Object, error) {
+	c.RLock()
+	defer c.RUnlock()
+
 	if err := c.embedObjectsIfNeeded(ctx, []*objstoreentities.Object{obj}); err != nil {
 		return nil, err
 	}

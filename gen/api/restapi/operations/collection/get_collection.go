@@ -31,9 +31,9 @@ func NewGetCollection(ctx *middleware.Context, handler GetCollectionHandler) *Ge
 
 /*GetCollection swagger:route GET /v1/collection/{collectionName} collection getCollection
 
-GetObject collection information
+Get collection information
 
-GetObject collection information
+Get collection information
 
 */
 type GetCollection struct {

@@ -11,7 +11,7 @@ import (
 )
 
 type DB struct {
-	mu              sync.RWMutex
+	sync.RWMutex
 	metadataManager *metadata.MetaManager
 	collections     *sync.Map
 	logger          *logrus.Logger

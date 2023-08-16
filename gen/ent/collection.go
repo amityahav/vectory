@@ -29,6 +29,8 @@ type Collection struct {
 	IndexParams map[string]interface{} `json:"index_params,omitempty"`
 	// EmbedderConfig holds the value of the "embedder_config" field.
 	EmbedderConfig map[string]interface{} `json:"embedder_config,omitempty"`
+	// Schema holds the value of the "schema" field.
+	Schema map[string]interface{} `json:"schema,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the CollectionQuery when eager-loading is set.
 	Edges        CollectionEdges `json:"edges"`
@@ -58,7 +60,7 @@ func (*Collection) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case collection.FieldIndexParams, collection.FieldEmbedderConfig:
+		case collection.FieldIndexParams, collection.FieldEmbedderConfig, collection.FieldSchema:
 			values[i] = new([]byte)
 		case collection.FieldID:
 			values[i] = new(sql.NullInt64)
@@ -125,6 +127,14 @@ func (c *Collection) assignValues(columns []string, values []any) error {
 					return fmt.Errorf("unmarshal field embedder_config: %w", err)
 				}
 			}
+		case collection.FieldSchema:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field schema", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &c.Schema); err != nil {
+					return fmt.Errorf("unmarshal field schema: %w", err)
+				}
+			}
 		default:
 			c.selectValues.Set(columns[i], values[i])
 		}
@@ -183,6 +193,9 @@ func (c *Collection) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("embedder_config=")
 	builder.WriteString(fmt.Sprintf("%v", c.EmbedderConfig))
+	builder.WriteString(", ")
+	builder.WriteString("schema=")
+	builder.WriteString(fmt.Sprintf("%v", c.Schema))
 	builder.WriteByte(')')
 	return builder.String()
 }

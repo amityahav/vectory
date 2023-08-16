@@ -64,6 +64,12 @@ func (cu *CollectionUpdate) SetEmbedderConfig(m map[string]interface{}) *Collect
 	return cu
 }
 
+// SetSchema sets the "schema" field.
+func (cu *CollectionUpdate) SetSchema(m map[string]interface{}) *CollectionUpdate {
+	cu.mutation.SetSchema(m)
+	return cu
+}
+
 // AddFileIDs adds the "files" edge to the File entity by IDs.
 func (cu *CollectionUpdate) AddFileIDs(ids ...int) *CollectionUpdate {
 	cu.mutation.AddFileIDs(ids...)
@@ -158,6 +164,9 @@ func (cu *CollectionUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := cu.mutation.EmbedderConfig(); ok {
 		_spec.SetField(collection.FieldEmbedderConfig, field.TypeJSON, value)
+	}
+	if value, ok := cu.mutation.Schema(); ok {
+		_spec.SetField(collection.FieldSchema, field.TypeJSON, value)
 	}
 	if cu.mutation.FilesCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -257,6 +266,12 @@ func (cuo *CollectionUpdateOne) SetIndexParams(m map[string]interface{}) *Collec
 // SetEmbedderConfig sets the "embedder_config" field.
 func (cuo *CollectionUpdateOne) SetEmbedderConfig(m map[string]interface{}) *CollectionUpdateOne {
 	cuo.mutation.SetEmbedderConfig(m)
+	return cuo
+}
+
+// SetSchema sets the "schema" field.
+func (cuo *CollectionUpdateOne) SetSchema(m map[string]interface{}) *CollectionUpdateOne {
+	cuo.mutation.SetSchema(m)
 	return cuo
 }
 
@@ -384,6 +399,9 @@ func (cuo *CollectionUpdateOne) sqlSave(ctx context.Context) (_node *Collection,
 	}
 	if value, ok := cuo.mutation.EmbedderConfig(); ok {
 		_spec.SetField(collection.FieldEmbedderConfig, field.TypeJSON, value)
+	}
+	if value, ok := cuo.mutation.Schema(); ok {
+		_spec.SetField(collection.FieldSchema, field.TypeJSON, value)
 	}
 	if cuo.mutation.FilesCleared() {
 		edge := &sqlgraph.EdgeSpec{

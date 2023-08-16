@@ -32,6 +32,9 @@ type Collection struct {
 
 	// name
 	Name string `json:"name,omitempty"`
+
+	// schema
+	Schema interface{} `json:"schema,omitempty"`
 }
 
 // Validate validates this collection

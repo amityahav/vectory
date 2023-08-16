@@ -23,4 +23,7 @@ type Collection struct {
 
 	// embedder config
 	EmbedderConfig interface{} `json:"embedder_config,omitempty"`
+
+	// schema
+	Schema interface{} `json:"schema,omitempty"`
 }

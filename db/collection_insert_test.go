@@ -143,6 +143,10 @@ func TestCollection(t *testing.T) {
 
 }
 
+func TestRecall(t *testing.T) {
+
+}
+
 func BenchmarkCollection_InsertBatch(b *testing.B) {
 	defer profile.Start(profile.CPUProfile, profile.ProfilePath("./profile")).Stop()
 	b.ResetTimer()
@@ -161,8 +165,8 @@ func BenchmarkCollection_InsertBatch(b *testing.B) {
 		IndexType: index.Hnsw,
 		DataType:  "text",
 		IndexParams: index.HnswParams{
-			M:              64,
-			MMax:           128,
+			M:              32,
+			MMax:           64,
 			EfConstruction: 400,
 			Ef:             100,
 			Heuristic:      true,
@@ -181,7 +185,7 @@ func BenchmarkCollection_InsertBatch(b *testing.B) {
 		}
 	}
 
-	//objects := loadObjects("./core/index/hnsw/siftsmall/siftsmall_base.fvecs")
+	//objects = loadObjects("./core/index/hnsw/siftsmall/siftsmall_base.fvecs")
 
 	start := time.Now()
 	err = c.InsertBatch(ctx, objects)

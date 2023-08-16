@@ -40,6 +40,7 @@ type CollectionMutation struct {
 	embedder_type   *string
 	index_params    *map[string]interface{}
 	embedder_config *map[string]interface{}
+	schema          *map[string]interface{}
 	clearedFields   map[string]struct{}
 	files           map[int]struct{}
 	removedfiles    map[int]struct{}
@@ -363,6 +364,42 @@ func (m *CollectionMutation) ResetEmbedderConfig() {
 	m.embedder_config = nil
 }
 
+// SetSchema sets the "schema" field.
+func (m *CollectionMutation) SetSchema(value map[string]interface{}) {
+	m.schema = &value
+}
+
+// Schema returns the value of the "schema" field in the mutation.
+func (m *CollectionMutation) Schema() (r map[string]interface{}, exists bool) {
+	v := m.schema
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSchema returns the old "schema" field's value of the Collection entity.
+// If the Collection object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CollectionMutation) OldSchema(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSchema is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSchema requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSchema: %w", err)
+	}
+	return oldValue.Schema, nil
+}
+
+// ResetSchema resets all changes to the "schema" field.
+func (m *CollectionMutation) ResetSchema() {
+	m.schema = nil
+}
+
 // AddFileIDs adds the "files" edge to the File entity by ids.
 func (m *CollectionMutation) AddFileIDs(ids ...int) {
 	if m.files == nil {
@@ -451,7 +488,7 @@ func (m *CollectionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CollectionMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 7)
 	if m.name != nil {
 		fields = append(fields, collection.FieldName)
 	}
@@ -469,6 +506,9 @@ func (m *CollectionMutation) Fields() []string {
 	}
 	if m.embedder_config != nil {
 		fields = append(fields, collection.FieldEmbedderConfig)
+	}
+	if m.schema != nil {
+		fields = append(fields, collection.FieldSchema)
 	}
 	return fields
 }
@@ -490,6 +530,8 @@ func (m *CollectionMutation) Field(name string) (ent.Value, bool) {
 		return m.IndexParams()
 	case collection.FieldEmbedderConfig:
 		return m.EmbedderConfig()
+	case collection.FieldSchema:
+		return m.Schema()
 	}
 	return nil, false
 }
@@ -511,6 +553,8 @@ func (m *CollectionMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldIndexParams(ctx)
 	case collection.FieldEmbedderConfig:
 		return m.OldEmbedderConfig(ctx)
+	case collection.FieldSchema:
+		return m.OldSchema(ctx)
 	}
 	return nil, fmt.Errorf("unknown Collection field %s", name)
 }
@@ -561,6 +605,13 @@ func (m *CollectionMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetEmbedderConfig(v)
+		return nil
+	case collection.FieldSchema:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSchema(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Collection field %s", name)
@@ -628,6 +679,9 @@ func (m *CollectionMutation) ResetField(name string) error {
 		return nil
 	case collection.FieldEmbedderConfig:
 		m.ResetEmbedderConfig()
+		return nil
+	case collection.FieldSchema:
+		m.ResetSchema()
 		return nil
 	}
 	return fmt.Errorf("unknown Collection field %s", name)

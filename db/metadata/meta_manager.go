@@ -60,6 +60,17 @@ func (m *MetaManager) CreateCollection(ctx context.Context, cfg *collectionent.C
 		return 0, err
 	}
 
+	b, err = json.Marshal(cfg.EmbedderConfig)
+	if err != nil {
+		return 0, nil
+	}
+
+	var schema map[string]interface{}
+	err = json.Unmarshal(b, &schema)
+	if err != nil {
+		return 0, err
+	}
+
 	c, err := m.db.Collection.Create().
 		SetName(cfg.Name).
 		SetIndexType(cfg.IndexType).
@@ -67,6 +78,7 @@ func (m *MetaManager) CreateCollection(ctx context.Context, cfg *collectionent.C
 		SetEmbedderType(cfg.EmbedderType).
 		SetEmbedderConfig(config).
 		SetIndexParams(params).
+		SetSchema(schema).
 		Save(ctx)
 
 	if err != nil {

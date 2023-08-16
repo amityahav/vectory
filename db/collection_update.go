@@ -4,6 +4,8 @@ import objstoreentities "Vectory/entities/objstore"
 
 // Update updates obj in the collection.
 func (c *Collection) Update(obj *objstoreentities.Object) error {
+	c.Lock()
+	defer c.Unlock()
 	// TODO: handle race conditions
 	return nil
 }

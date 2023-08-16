@@ -7,6 +7,13 @@ import (
 
 // Insert inserts one object to the collection.
 func (c *Collection) Insert(ctx context.Context, obj *objstoreentities.Object) error {
+	c.Lock()
+	defer c.Unlock()
+
+	if err := c.validateObjectsSchema([]*objstoreentities.Object{obj}); err != nil {
+		return err
+	}
+
 	if err := c.embedObjectsIfNeeded(ctx, []*objstoreentities.Object{obj}); err != nil {
 		return err
 	}
@@ -25,6 +32,13 @@ func (c *Collection) Insert(ctx context.Context, obj *objstoreentities.Object) e
 // InsertBatch inserts a batch of objects to the collection.
 // it does that by splitting the batch into equally sized chunks distributed among multiple worker threads.
 func (c *Collection) InsertBatch(ctx context.Context, objs []*objstoreentities.Object) error {
+	c.Lock()
+	defer c.Unlock()
+
+	if err := c.validateObjectsSchema(objs); err != nil {
+		return err
+	}
+
 	if err := c.embedObjectsIfNeeded(ctx, objs); err != nil {
 		return err
 	}
@@ -70,6 +84,13 @@ func (c *Collection) InsertBatch(ctx context.Context, objs []*objstoreentities.O
 
 // InsertBatch2 is the same as InsertBatch but creates a channel from objs and share it among the worker threads.
 func (c *Collection) InsertBatch2(ctx context.Context, objs []*objstoreentities.Object) error {
+	c.Lock()
+	defer c.Unlock()
+
+	if err := c.validateObjectsSchema(objs); err != nil {
+		return err
+	}
+
 	if err := c.embedObjectsIfNeeded(ctx, objs); err != nil {
 		return err
 	}
@@ -110,7 +131,7 @@ func (c *Collection) InsertBatch2(ctx context.Context, objs []*objstoreentities.
 }
 
 // insert handles the actual insertion of the object both to the object storage and index.
-// it will also create an embedding for the data if vector is not specified.
+// it will also creates an embedding for the data if vector is not specified.
 func (c *Collection) insert(obj *objstoreentities.Object) error {
 	// TODO: validate obj data type is the same as collection's
 	id, err := c.idCounter.FetchAndInc()

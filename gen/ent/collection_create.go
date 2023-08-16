@@ -56,6 +56,12 @@ func (cc *CollectionCreate) SetEmbedderConfig(m map[string]interface{}) *Collect
 	return cc
 }
 
+// SetSchema sets the "schema" field.
+func (cc *CollectionCreate) SetSchema(m map[string]interface{}) *CollectionCreate {
+	cc.mutation.SetSchema(m)
+	return cc
+}
+
 // AddFileIDs adds the "files" edge to the File entity by IDs.
 func (cc *CollectionCreate) AddFileIDs(ids ...int) *CollectionCreate {
 	cc.mutation.AddFileIDs(ids...)
@@ -123,6 +129,9 @@ func (cc *CollectionCreate) check() error {
 	if _, ok := cc.mutation.EmbedderConfig(); !ok {
 		return &ValidationError{Name: "embedder_config", err: errors.New(`ent: missing required field "Collection.embedder_config"`)}
 	}
+	if _, ok := cc.mutation.Schema(); !ok {
+		return &ValidationError{Name: "schema", err: errors.New(`ent: missing required field "Collection.schema"`)}
+	}
 	return nil
 }
 
@@ -172,6 +181,10 @@ func (cc *CollectionCreate) createSpec() (*Collection, *sqlgraph.CreateSpec) {
 	if value, ok := cc.mutation.EmbedderConfig(); ok {
 		_spec.SetField(collection.FieldEmbedderConfig, field.TypeJSON, value)
 		_node.EmbedderConfig = value
+	}
+	if value, ok := cc.mutation.Schema(); ok {
+		_spec.SetField(collection.FieldSchema, field.TypeJSON, value)
+		_node.Schema = value
 	}
 	if nodes := cc.mutation.FilesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

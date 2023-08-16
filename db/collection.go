@@ -14,11 +14,13 @@ import (
 	"fmt"
 	"github.com/alitto/pond"
 	"runtime"
+	"sync"
 )
 
 var _ CRUD = &Collection{}
 
 type Collection struct {
+	sync.RWMutex
 	id          int
 	name        string
 	dataType    string
@@ -91,6 +93,10 @@ func newCollection(id int, cfg *collection.Collection, filesPath string) (*Colle
 
 func (c *Collection) GetConfig() collection.Collection {
 	return c.config
+}
+
+func (c *Collection) validateObjectsSchema(objs []*objstoreentities.Object) error {
+	return nil
 }
 
 func (c *Collection) embedObjectsIfNeeded(ctx context.Context, objs []*objstoreentities.Object) error {

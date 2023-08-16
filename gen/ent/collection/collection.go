@@ -24,6 +24,8 @@ const (
 	FieldIndexParams = "index_params"
 	// FieldEmbedderConfig holds the string denoting the embedder_config field in the database.
 	FieldEmbedderConfig = "embedder_config"
+	// FieldSchema holds the string denoting the schema field in the database.
+	FieldSchema = "schema"
 	// EdgeFiles holds the string denoting the files edge name in mutations.
 	EdgeFiles = "files"
 	// Table holds the table name of the collection in the database.
@@ -46,6 +48,7 @@ var Columns = []string{
 	FieldEmbedderType,
 	FieldIndexParams,
 	FieldEmbedderConfig,
+	FieldSchema,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

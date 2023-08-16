@@ -60,11 +60,11 @@ func init() {
     },
     "/v1/collection/{collectionName}": {
       "get": {
-        "description": "GetObject collection information",
+        "description": "Get collection information",
         "tags": [
           "collection"
         ],
-        "summary": "GetObject collection information",
+        "summary": "Get collection information",
         "operationId": "getCollection",
         "parameters": [
           {
@@ -157,6 +157,10 @@ func init() {
           "type": "string",
           "x-order": 0,
           "example": "movie-reviews"
+        },
+        "schema": {
+          "type": "object",
+          "x-order": 6
         }
       }
     },
@@ -214,11 +218,11 @@ func init() {
     },
     "/v1/collection/{collectionName}": {
       "get": {
-        "description": "GetObject collection information",
+        "description": "Get collection information",
         "tags": [
           "collection"
         ],
-        "summary": "GetObject collection information",
+        "summary": "Get collection information",
         "operationId": "getCollection",
         "parameters": [
           {
@@ -311,6 +315,10 @@ func init() {
           "type": "string",
           "x-order": 0,
           "example": "movie-reviews"
+        },
+        "schema": {
+          "type": "object",
+          "x-order": 6
         }
       }
     },

@@ -17,6 +17,7 @@ var (
 		{Name: "embedder_type", Type: field.TypeString},
 		{Name: "index_params", Type: field.TypeJSON},
 		{Name: "embedder_config", Type: field.TypeJSON},
+		{Name: "schema", Type: field.TypeJSON},
 	}
 	// CollectionsTable holds the schema information for the "collections" table.
 	CollectionsTable = &schema.Table{

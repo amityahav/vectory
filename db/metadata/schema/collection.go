@@ -18,6 +18,7 @@ func (Collection) Fields() []ent.Field {
 		field.String("embedder_type"),
 		field.JSON("index_params", map[string]interface{}{}),
 		field.JSON("embedder_config", map[string]interface{}{}),
+		field.JSON("schema", map[string]interface{}{}),
 	}
 }
 

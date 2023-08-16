@@ -13,6 +13,7 @@ const (
 	addConnectionAtLevel
 )
 
+// TODO: should find/create a wal that supports batch writes for batch inserts
 type wal struct {
 	f *w.WAL // wal operations are guarded internally by a lock
 }
