@@ -8,14 +8,19 @@ import (
 func TestObject(t *testing.T) {
 	t.Run("serialization-deserialization", func(t *testing.T) {
 		obj := Object{
-			Data:   "This is an object",
+			Properties: map[string]interface{}{
+				"field1": "test1",
+				"field2": "test2",
+			},
 			Vector: []float32{0.123, 0.12, 12, 12.3},
 		}
 
-		b := obj.Serialize()
+		b, err := obj.Serialize()
+		require.NoError(t, err)
 
 		obj2 := Object{}
-		obj2.Deserialize(b)
+		err = obj2.Deserialize(b)
+		require.NoError(t, err)
 
 		require.Equal(t, obj, obj2)
 	})

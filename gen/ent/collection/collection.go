@@ -4,7 +4,6 @@ package collection
 
 import (
 	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/dialect/sql/sqlgraph"
 )
 
 const (
@@ -24,19 +23,10 @@ const (
 	FieldIndexParams = "index_params"
 	// FieldEmbedderConfig holds the string denoting the embedder_config field in the database.
 	FieldEmbedderConfig = "embedder_config"
-	// FieldSchema holds the string denoting the schema field in the database.
-	FieldSchema = "schema"
-	// EdgeFiles holds the string denoting the files edge name in mutations.
-	EdgeFiles = "files"
+	// FieldMappings holds the string denoting the mappings field in the database.
+	FieldMappings = "mappings"
 	// Table holds the table name of the collection in the database.
 	Table = "collections"
-	// FilesTable is the table that holds the files relation/edge.
-	FilesTable = "files"
-	// FilesInverseTable is the table name for the File entity.
-	// It exists in this package in order to avoid circular dependency with the "file" package.
-	FilesInverseTable = "files"
-	// FilesColumn is the table column denoting the files relation/edge.
-	FilesColumn = "collection_files"
 )
 
 // Columns holds all SQL columns for collection fields.
@@ -48,7 +38,7 @@ var Columns = []string{
 	FieldEmbedderType,
 	FieldIndexParams,
 	FieldEmbedderConfig,
-	FieldSchema,
+	FieldMappings,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -87,25 +77,4 @@ func ByDataType(opts ...sql.OrderTermOption) OrderOption {
 // ByEmbedderType orders the results by the embedder_type field.
 func ByEmbedderType(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEmbedderType, opts...).ToFunc()
-}
-
-// ByFilesCount orders the results by files count.
-func ByFilesCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newFilesStep(), opts...)
-	}
-}
-
-// ByFiles orders the results by files terms.
-func ByFiles(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newFilesStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-func newFilesStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(FilesInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, FilesTable, FilesColumn),
-	)
 }

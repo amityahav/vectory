@@ -8,7 +8,6 @@ import (
 	"Vectory/entities/index"
 	"Vectory/entities/objstore"
 	"context"
-	"fmt"
 	"log"
 	"os"
 )
@@ -22,14 +21,14 @@ func main() {
 	}
 
 	c, err := vectory.CreateCollection(ctx, &collection.Collection{
-		Name:      "Movie Reviews",
+		Name:      "Articles",
 		IndexType: index.Hnsw,
 		IndexParams: index.HnswParams{
 			M:              0,
 			MMax:           0,
 			EfConstruction: 0,
 			Ef:             0,
-			Heuristic:      false,
+			Heuristic:      true,
 			DistanceType:   distance.Euclidean,
 		},
 		EmbedderType: text2vec.Text2VecHuggingFace,
@@ -45,7 +44,9 @@ func main() {
 	objects := make([]*objstore.Object, 0, 100)
 	for i := 0; i < 100; i++ {
 		o := objstore.Object{
-			Data: fmt.Sprintf("review-%d", i),
+			Properties: map[string]interface{}{
+				"title":   "Test",
+				"content": "blah"},
 		}
 
 		objects = append(objects, &o)
@@ -55,13 +56,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ann, err := c.SemanticSearch(ctx, &objstore.Object{
-		Data: "barbie",
-	}, 10)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(ann)
+	//ann, err := c.SemanticSearch(ctx, &objstore.Object{
+	//	Data: "barbie",
+	//}, 10)
+	//
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//
+	//fmt.Println(ann)
 }

@@ -4,7 +4,6 @@ package ent
 
 import (
 	"Vectory/gen/ent/collection"
-	"Vectory/gen/ent/file"
 	"context"
 	"errors"
 	"fmt"
@@ -56,25 +55,10 @@ func (cc *CollectionCreate) SetEmbedderConfig(m map[string]interface{}) *Collect
 	return cc
 }
 
-// SetSchema sets the "schema" field.
-func (cc *CollectionCreate) SetSchema(m map[string]interface{}) *CollectionCreate {
-	cc.mutation.SetSchema(m)
+// SetMappings sets the "mappings" field.
+func (cc *CollectionCreate) SetMappings(s []string) *CollectionCreate {
+	cc.mutation.SetMappings(s)
 	return cc
-}
-
-// AddFileIDs adds the "files" edge to the File entity by IDs.
-func (cc *CollectionCreate) AddFileIDs(ids ...int) *CollectionCreate {
-	cc.mutation.AddFileIDs(ids...)
-	return cc
-}
-
-// AddFiles adds the "files" edges to the File entity.
-func (cc *CollectionCreate) AddFiles(f ...*File) *CollectionCreate {
-	ids := make([]int, len(f))
-	for i := range f {
-		ids[i] = f[i].ID
-	}
-	return cc.AddFileIDs(ids...)
 }
 
 // Mutation returns the CollectionMutation object of the builder.
@@ -129,8 +113,8 @@ func (cc *CollectionCreate) check() error {
 	if _, ok := cc.mutation.EmbedderConfig(); !ok {
 		return &ValidationError{Name: "embedder_config", err: errors.New(`ent: missing required field "Collection.embedder_config"`)}
 	}
-	if _, ok := cc.mutation.Schema(); !ok {
-		return &ValidationError{Name: "schema", err: errors.New(`ent: missing required field "Collection.schema"`)}
+	if _, ok := cc.mutation.Mappings(); !ok {
+		return &ValidationError{Name: "mappings", err: errors.New(`ent: missing required field "Collection.mappings"`)}
 	}
 	return nil
 }
@@ -182,25 +166,9 @@ func (cc *CollectionCreate) createSpec() (*Collection, *sqlgraph.CreateSpec) {
 		_spec.SetField(collection.FieldEmbedderConfig, field.TypeJSON, value)
 		_node.EmbedderConfig = value
 	}
-	if value, ok := cc.mutation.Schema(); ok {
-		_spec.SetField(collection.FieldSchema, field.TypeJSON, value)
-		_node.Schema = value
-	}
-	if nodes := cc.mutation.FilesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   collection.FilesTable,
-			Columns: []string{collection.FilesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
+	if value, ok := cc.mutation.Mappings(); ok {
+		_spec.SetField(collection.FieldMappings, field.TypeJSON, value)
+		_node.Mappings = value
 	}
 	return _node, _spec
 }

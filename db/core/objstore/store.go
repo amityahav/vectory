@@ -28,7 +28,12 @@ func (s *ObjectStore) Put(obj *objstore.Object) error {
 	idBytes := make([]byte, 8) // TODO: can be reused
 	binary.LittleEndian.PutUint64(idBytes, obj.Id)
 
-	return s.db.Put(idBytes, obj.Serialize())
+	b, err := obj.Serialize()
+	if err != nil {
+		return err
+	}
+
+	return s.db.Put(idBytes, b)
 }
 
 func (s *ObjectStore) GetObject(id uint64) (*objstore.Object, bool, error) {

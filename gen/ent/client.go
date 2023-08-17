@@ -11,12 +11,10 @@ import (
 	"Vectory/gen/ent/migrate"
 
 	"Vectory/gen/ent/collection"
-	"Vectory/gen/ent/file"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/dialect/sql/sqlgraph"
 )
 
 // Client is the client that holds all ent builders.
@@ -26,8 +24,6 @@ type Client struct {
 	Schema *migrate.Schema
 	// Collection is the client for interacting with the Collection builders.
 	Collection *CollectionClient
-	// File is the client for interacting with the File builders.
-	File *FileClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -42,7 +38,6 @@ func NewClient(opts ...Option) *Client {
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.Collection = NewCollectionClient(c.config)
-	c.File = NewFileClient(c.config)
 }
 
 type (
@@ -126,7 +121,6 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ctx:        ctx,
 		config:     cfg,
 		Collection: NewCollectionClient(cfg),
-		File:       NewFileClient(cfg),
 	}, nil
 }
 
@@ -147,7 +141,6 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ctx:        ctx,
 		config:     cfg,
 		Collection: NewCollectionClient(cfg),
-		File:       NewFileClient(cfg),
 	}, nil
 }
 
@@ -178,14 +171,12 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	c.Collection.Use(hooks...)
-	c.File.Use(hooks...)
 }
 
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	c.Collection.Intercept(interceptors...)
-	c.File.Intercept(interceptors...)
 }
 
 // Mutate implements the ent.Mutator interface.
@@ -193,8 +184,6 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
 	case *CollectionMutation:
 		return c.Collection.mutate(ctx, m)
-	case *FileMutation:
-		return c.File.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
 	}
@@ -293,22 +282,6 @@ func (c *CollectionClient) GetX(ctx context.Context, id int) *Collection {
 	return obj
 }
 
-// QueryFiles queries the files edge of a Collection.
-func (c *CollectionClient) QueryFiles(co *Collection) *FileQuery {
-	query := (&FileClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := co.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(collection.Table, collection.FieldID, id),
-			sqlgraph.To(file.Table, file.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, collection.FilesTable, collection.FilesColumn),
-		)
-		fromV = sqlgraph.Neighbors(co.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // Hooks returns the client hooks.
 func (c *CollectionClient) Hooks() []Hook {
 	return c.hooks.Collection
@@ -334,130 +307,12 @@ func (c *CollectionClient) mutate(ctx context.Context, m *CollectionMutation) (V
 	}
 }
 
-// FileClient is a client for the File schema.
-type FileClient struct {
-	config
-}
-
-// NewFileClient returns a client for the File from the given config.
-func NewFileClient(c config) *FileClient {
-	return &FileClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `file.Hooks(f(g(h())))`.
-func (c *FileClient) Use(hooks ...Hook) {
-	c.hooks.File = append(c.hooks.File, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `file.Intercept(f(g(h())))`.
-func (c *FileClient) Intercept(interceptors ...Interceptor) {
-	c.inters.File = append(c.inters.File, interceptors...)
-}
-
-// Create returns a builder for creating a File entity.
-func (c *FileClient) Create() *FileCreate {
-	mutation := newFileMutation(c.config, OpCreate)
-	return &FileCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of File entities.
-func (c *FileClient) CreateBulk(builders ...*FileCreate) *FileCreateBulk {
-	return &FileCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for File.
-func (c *FileClient) Update() *FileUpdate {
-	mutation := newFileMutation(c.config, OpUpdate)
-	return &FileUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *FileClient) UpdateOne(f *File) *FileUpdateOne {
-	mutation := newFileMutation(c.config, OpUpdateOne, withFile(f))
-	return &FileUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *FileClient) UpdateOneID(id int) *FileUpdateOne {
-	mutation := newFileMutation(c.config, OpUpdateOne, withFileID(id))
-	return &FileUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for File.
-func (c *FileClient) Delete() *FileDelete {
-	mutation := newFileMutation(c.config, OpDelete)
-	return &FileDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *FileClient) DeleteOne(f *File) *FileDeleteOne {
-	return c.DeleteOneID(f.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *FileClient) DeleteOneID(id int) *FileDeleteOne {
-	builder := c.Delete().Where(file.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &FileDeleteOne{builder}
-}
-
-// Query returns a query builder for File.
-func (c *FileClient) Query() *FileQuery {
-	return &FileQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeFile},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a File entity by its id.
-func (c *FileClient) Get(ctx context.Context, id int) (*File, error) {
-	return c.Query().Where(file.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *FileClient) GetX(ctx context.Context, id int) *File {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// Hooks returns the client hooks.
-func (c *FileClient) Hooks() []Hook {
-	return c.hooks.File
-}
-
-// Interceptors returns the client interceptors.
-func (c *FileClient) Interceptors() []Interceptor {
-	return c.inters.File
-}
-
-func (c *FileClient) mutate(ctx context.Context, m *FileMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&FileCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&FileUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&FileUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&FileDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown File mutation op: %q", m.Op())
-	}
-}
-
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Collection, File []ent.Hook
+		Collection []ent.Hook
 	}
 	inters struct {
-		Collection, File []ent.Interceptor
+		Collection []ent.Interceptor
 	}
 )

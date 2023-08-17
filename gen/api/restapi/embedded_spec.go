@@ -153,14 +153,17 @@ func init() {
           "x-order": 1,
           "example": "disk_ann"
         },
+        "mappings": {
+          "type": "array",
+          "items": {
+            "format": "string"
+          },
+          "x-order": 6
+        },
         "name": {
           "type": "string",
           "x-order": 0,
           "example": "movie-reviews"
-        },
-        "schema": {
-          "type": "object",
-          "x-order": 6
         }
       }
     },
@@ -311,14 +314,17 @@ func init() {
           "x-order": 1,
           "example": "disk_ann"
         },
+        "mappings": {
+          "type": "array",
+          "items": {
+            "format": "string"
+          },
+          "x-order": 6
+        },
         "name": {
           "type": "string",
           "x-order": 0,
           "example": "movie-reviews"
-        },
-        "schema": {
-          "type": "object",
-          "x-order": 6
         }
       }
     },

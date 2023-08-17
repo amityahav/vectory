@@ -4,7 +4,6 @@ package ent
 
 import (
 	"Vectory/gen/ent/collection"
-	"Vectory/gen/ent/file"
 	"context"
 	"errors"
 	"fmt"
@@ -75,7 +74,6 @@ func checkColumn(table, column string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
 			collection.Table: collection.ValidColumn,
-			file.Table:       file.ValidColumn,
 		})
 	})
 	return columnCheck(table, column)

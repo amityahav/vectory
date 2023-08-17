@@ -691,8 +691,10 @@ definitions:
           type: object
         embedder_config:
           type: object
-        schema:
-          type: object
+        mappings:
+          type: array
+          items:
+            format: string
     CollectionCreated:
       type: object
       properties: 

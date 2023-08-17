@@ -43,6 +43,7 @@ func TestCollection(t *testing.T) {
 				Heuristic:      true,
 				DistanceType:   distance.Euclidean,
 			},
+			Mappings: []string{"title", "content"},
 		})
 		require.NoError(t, err)
 
@@ -51,7 +52,10 @@ func TestCollection(t *testing.T) {
 		t.Run("sequential insertion with vectors", func(t *testing.T) {
 			for i := 0; i < 100; i++ {
 				o := objstore.Object{
-					Data:   fmt.Sprintf("%d", i),
+					Properties: map[string]interface{}{
+						"title":   "Test",
+						"content": "blah",
+					},
 					Vector: randomVector(128),
 				}
 
@@ -75,10 +79,24 @@ func TestCollection(t *testing.T) {
 
 		t.Run("insert with no vector and no embedder", func(t *testing.T) {
 			obj := objstore.Object{
-				Data: "test",
+				Properties: map[string]interface{}{
+					"title":   "Test",
+					"content": "blah",
+				},
 			}
 
 			require.ErrorIs(t, c.Insert(ctx, &obj), ErrMissingVectorAndEmbedder)
+		})
+
+		t.Run("insert with invalid mappings", func(t *testing.T) {
+			obj := objstore.Object{
+				Properties: map[string]interface{}{
+					"title": "Test",
+					"x":     "blah",
+				},
+			}
+
+			require.Error(t, c.Insert(ctx, &obj))
 		})
 	}
 
@@ -96,14 +114,17 @@ func TestCollection(t *testing.T) {
 				Heuristic:      true,
 				DistanceType:   distance.Euclidean,
 			},
+			Mappings: []string{"title", "content"},
 		})
 		require.NoError(t, err)
 
 		t.Run("insert with vector and embedder", func(t *testing.T) {
 			vec := randomVector(128)
 			obj := objstore.Object{
-				Data:   "Hello world",
-				Vector: vec,
+				Properties: map[string]interface{}{
+					"title":   "Test",
+					"content": "blah",
+				},
 			}
 
 			err = c.Insert(ctx, &obj)
@@ -114,7 +135,10 @@ func TestCollection(t *testing.T) {
 
 		t.Run("insert without vector and embedder", func(t *testing.T) {
 			obj := objstore.Object{
-				Data: "Hello world",
+				Properties: map[string]interface{}{
+					"title":   "Test",
+					"content": "blah",
+				},
 			}
 
 			err = c.Insert(ctx, &obj)
@@ -126,12 +150,18 @@ func TestCollection(t *testing.T) {
 		t.Run("InsertBatch with vectors and embedder", func(t *testing.T) {
 			vec := randomVector(128)
 			obj := objstore.Object{
-				Data:   "Hello world",
+				Properties: map[string]interface{}{
+					"title":   "Test",
+					"content": "blah",
+				},
 				Vector: vec,
 			}
 
 			obj2 := objstore.Object{
-				Data: "Hello world2",
+				Properties: map[string]interface{}{
+					"title":   "Test",
+					"content": "blah",
+				},
 			}
 
 			err = c.InsertBatch(ctx, []*objstore.Object{&obj, &obj2})
@@ -172,6 +202,7 @@ func BenchmarkCollection_InsertBatch(b *testing.B) {
 			Heuristic:      true,
 			DistanceType:   distance.Euclidean,
 		},
+		Mappings: []string{"title", "content"},
 	})
 	require.NoError(b, err)
 
@@ -179,8 +210,11 @@ func BenchmarkCollection_InsertBatch(b *testing.B) {
 	objects := make([]*objstore.Object, 10000)
 	for i := 0; i < len(objects); i++ {
 		objects[i] = &objstore.Object{
-			Id:     0,
-			Data:   "Hello world",
+			Id: 0,
+			Properties: map[string]interface{}{
+				"title":   "Test",
+				"content": "blah",
+			},
 			Vector: randomVector(dim),
 		}
 	}
@@ -224,14 +258,17 @@ func BenchmarkCollection_InsertBatch_WithEmbedder(b *testing.B) {
 			Heuristic:      true,
 			DistanceType:   distance.Euclidean,
 		},
+		Mappings: []string{"title", "content"},
 	})
 	require.NoError(b, err)
 
 	objects := make([]*objstore.Object, 1)
 	for i := 0; i < len(objects); i++ {
 		objects[i] = &objstore.Object{
-			Data: fmt.Sprintf("Hello world %d", i),
-		}
+			Properties: map[string]interface{}{
+				"title":   "Test",
+				"content": "blah",
+			}}
 	}
 
 	//objects := loadObjects("./core/index/hnsw/siftsmall/siftsmall_base.fvecs")
@@ -276,9 +313,11 @@ func BenchmarkCollection_InsertBatch2(b *testing.B) {
 	objects := make([]*objstore.Object, 10000)
 	for i := 0; i < len(objects); i++ {
 		objects[i] = &objstore.Object{
-			Id:     0,
-			Data:   "Hello world",
-			Vector: randomVector(dim),
+			Id: 0,
+			Properties: map[string]interface{}{
+				"title":   "Test",
+				"content": "blah",
+			}, Vector: randomVector(dim),
 		}
 	}
 
@@ -328,7 +367,10 @@ func loadObjects(path string) []*objstore.Object {
 		}
 
 		objects[i] = &objstore.Object{
-			Data:   "",
+			Properties: map[string]interface{}{
+				"title":   "Test",
+				"content": "blah",
+			},
 			Vector: vector,
 		}
 	}

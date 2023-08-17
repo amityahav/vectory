@@ -28,7 +28,7 @@ func NewText2vecEmbedder(cfg *text2vec.Config) *text2vecEmbedder {
 func (e *text2vecEmbedder) Embed(ctx context.Context, objects []*objstore.Object) error {
 	inputs := make([]string, 0, len(objects))
 	for _, o := range objects {
-		inputs = append(inputs, o.Data)
+		inputs = append(inputs, o.FlatProperties())
 	}
 
 	body := text2vec.EmbeddingRequest{

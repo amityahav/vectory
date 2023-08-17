@@ -14,8 +14,6 @@ type Tx struct {
 	config
 	// Collection is the client for interacting with the Collection builders.
 	Collection *CollectionClient
-	// File is the client for interacting with the File builders.
-	File *FileClient
 
 	// lazily loaded.
 	client     *Client
@@ -148,7 +146,6 @@ func (tx *Tx) Client() *Client {
 
 func (tx *Tx) init() {
 	tx.Collection = NewCollectionClient(tx.config)
-	tx.File = NewFileClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.

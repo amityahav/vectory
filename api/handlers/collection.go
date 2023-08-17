@@ -59,7 +59,7 @@ func (h *CollectionHandler) addCollection(params collection.AddCollectionParams)
 		EmbedderType:   params.Collection.EmbedderType,
 		IndexParams:    params.Collection.IndexParams,
 		EmbedderConfig: params.Collection.EmbedderConfig,
-		Schema:         params.Collection.Schema,
+		Mappings:       params.Collection.Mappings,
 		DataType:       params.Collection.DataType,
 	}
 

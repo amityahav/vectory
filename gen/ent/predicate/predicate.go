@@ -8,6 +8,3 @@ import (
 
 // Collection is the predicate function for collection builders.
 type Collection func(*sql.Selector)
-
-// File is the predicate function for file builders.
-type File func(*sql.Selector)

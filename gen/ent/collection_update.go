@@ -4,7 +4,6 @@ package ent
 
 import (
 	"Vectory/gen/ent/collection"
-	"Vectory/gen/ent/file"
 	"Vectory/gen/ent/predicate"
 	"context"
 	"errors"
@@ -12,6 +11,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 )
 
@@ -64,51 +64,21 @@ func (cu *CollectionUpdate) SetEmbedderConfig(m map[string]interface{}) *Collect
 	return cu
 }
 
-// SetSchema sets the "schema" field.
-func (cu *CollectionUpdate) SetSchema(m map[string]interface{}) *CollectionUpdate {
-	cu.mutation.SetSchema(m)
+// SetMappings sets the "mappings" field.
+func (cu *CollectionUpdate) SetMappings(s []string) *CollectionUpdate {
+	cu.mutation.SetMappings(s)
 	return cu
 }
 
-// AddFileIDs adds the "files" edge to the File entity by IDs.
-func (cu *CollectionUpdate) AddFileIDs(ids ...int) *CollectionUpdate {
-	cu.mutation.AddFileIDs(ids...)
+// AppendMappings appends s to the "mappings" field.
+func (cu *CollectionUpdate) AppendMappings(s []string) *CollectionUpdate {
+	cu.mutation.AppendMappings(s)
 	return cu
-}
-
-// AddFiles adds the "files" edges to the File entity.
-func (cu *CollectionUpdate) AddFiles(f ...*File) *CollectionUpdate {
-	ids := make([]int, len(f))
-	for i := range f {
-		ids[i] = f[i].ID
-	}
-	return cu.AddFileIDs(ids...)
 }
 
 // Mutation returns the CollectionMutation object of the builder.
 func (cu *CollectionUpdate) Mutation() *CollectionMutation {
 	return cu.mutation
-}
-
-// ClearFiles clears all "files" edges to the File entity.
-func (cu *CollectionUpdate) ClearFiles() *CollectionUpdate {
-	cu.mutation.ClearFiles()
-	return cu
-}
-
-// RemoveFileIDs removes the "files" edge to File entities by IDs.
-func (cu *CollectionUpdate) RemoveFileIDs(ids ...int) *CollectionUpdate {
-	cu.mutation.RemoveFileIDs(ids...)
-	return cu
-}
-
-// RemoveFiles removes "files" edges to File entities.
-func (cu *CollectionUpdate) RemoveFiles(f ...*File) *CollectionUpdate {
-	ids := make([]int, len(f))
-	for i := range f {
-		ids[i] = f[i].ID
-	}
-	return cu.RemoveFileIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -165,53 +135,13 @@ func (cu *CollectionUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if value, ok := cu.mutation.EmbedderConfig(); ok {
 		_spec.SetField(collection.FieldEmbedderConfig, field.TypeJSON, value)
 	}
-	if value, ok := cu.mutation.Schema(); ok {
-		_spec.SetField(collection.FieldSchema, field.TypeJSON, value)
+	if value, ok := cu.mutation.Mappings(); ok {
+		_spec.SetField(collection.FieldMappings, field.TypeJSON, value)
 	}
-	if cu.mutation.FilesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   collection.FilesTable,
-			Columns: []string{collection.FilesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := cu.mutation.RemovedFilesIDs(); len(nodes) > 0 && !cu.mutation.FilesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   collection.FilesTable,
-			Columns: []string{collection.FilesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := cu.mutation.FilesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   collection.FilesTable,
-			Columns: []string{collection.FilesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	if value, ok := cu.mutation.AppendedMappings(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, collection.FieldMappings, value)
+		})
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, cu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -269,51 +199,21 @@ func (cuo *CollectionUpdateOne) SetEmbedderConfig(m map[string]interface{}) *Col
 	return cuo
 }
 
-// SetSchema sets the "schema" field.
-func (cuo *CollectionUpdateOne) SetSchema(m map[string]interface{}) *CollectionUpdateOne {
-	cuo.mutation.SetSchema(m)
+// SetMappings sets the "mappings" field.
+func (cuo *CollectionUpdateOne) SetMappings(s []string) *CollectionUpdateOne {
+	cuo.mutation.SetMappings(s)
 	return cuo
 }
 
-// AddFileIDs adds the "files" edge to the File entity by IDs.
-func (cuo *CollectionUpdateOne) AddFileIDs(ids ...int) *CollectionUpdateOne {
-	cuo.mutation.AddFileIDs(ids...)
+// AppendMappings appends s to the "mappings" field.
+func (cuo *CollectionUpdateOne) AppendMappings(s []string) *CollectionUpdateOne {
+	cuo.mutation.AppendMappings(s)
 	return cuo
-}
-
-// AddFiles adds the "files" edges to the File entity.
-func (cuo *CollectionUpdateOne) AddFiles(f ...*File) *CollectionUpdateOne {
-	ids := make([]int, len(f))
-	for i := range f {
-		ids[i] = f[i].ID
-	}
-	return cuo.AddFileIDs(ids...)
 }
 
 // Mutation returns the CollectionMutation object of the builder.
 func (cuo *CollectionUpdateOne) Mutation() *CollectionMutation {
 	return cuo.mutation
-}
-
-// ClearFiles clears all "files" edges to the File entity.
-func (cuo *CollectionUpdateOne) ClearFiles() *CollectionUpdateOne {
-	cuo.mutation.ClearFiles()
-	return cuo
-}
-
-// RemoveFileIDs removes the "files" edge to File entities by IDs.
-func (cuo *CollectionUpdateOne) RemoveFileIDs(ids ...int) *CollectionUpdateOne {
-	cuo.mutation.RemoveFileIDs(ids...)
-	return cuo
-}
-
-// RemoveFiles removes "files" edges to File entities.
-func (cuo *CollectionUpdateOne) RemoveFiles(f ...*File) *CollectionUpdateOne {
-	ids := make([]int, len(f))
-	for i := range f {
-		ids[i] = f[i].ID
-	}
-	return cuo.RemoveFileIDs(ids...)
 }
 
 // Where appends a list predicates to the CollectionUpdate builder.
@@ -400,53 +300,13 @@ func (cuo *CollectionUpdateOne) sqlSave(ctx context.Context) (_node *Collection,
 	if value, ok := cuo.mutation.EmbedderConfig(); ok {
 		_spec.SetField(collection.FieldEmbedderConfig, field.TypeJSON, value)
 	}
-	if value, ok := cuo.mutation.Schema(); ok {
-		_spec.SetField(collection.FieldSchema, field.TypeJSON, value)
+	if value, ok := cuo.mutation.Mappings(); ok {
+		_spec.SetField(collection.FieldMappings, field.TypeJSON, value)
 	}
-	if cuo.mutation.FilesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   collection.FilesTable,
-			Columns: []string{collection.FilesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := cuo.mutation.RemovedFilesIDs(); len(nodes) > 0 && !cuo.mutation.FilesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   collection.FilesTable,
-			Columns: []string{collection.FilesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := cuo.mutation.FilesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   collection.FilesTable,
-			Columns: []string{collection.FilesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	if value, ok := cuo.mutation.AppendedMappings(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, collection.FieldMappings, value)
+		})
 	}
 	_node = &Collection{config: cuo.config}
 	_spec.Assign = _node.assignValues

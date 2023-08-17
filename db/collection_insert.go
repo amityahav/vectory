@@ -7,10 +7,10 @@ import (
 
 // Insert inserts one object to the collection.
 func (c *Collection) Insert(ctx context.Context, obj *objstoreentities.Object) error {
-	c.Lock()
-	defer c.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	if err := c.validateObjectsSchema([]*objstoreentities.Object{obj}); err != nil {
+	if err := c.validateObjectsMappings([]*objstoreentities.Object{obj}); err != nil {
 		return err
 	}
 
@@ -32,10 +32,10 @@ func (c *Collection) Insert(ctx context.Context, obj *objstoreentities.Object) e
 // InsertBatch inserts a batch of objects to the collection.
 // it does that by splitting the batch into equally sized chunks distributed among multiple worker threads.
 func (c *Collection) InsertBatch(ctx context.Context, objs []*objstoreentities.Object) error {
-	c.Lock()
-	defer c.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	if err := c.validateObjectsSchema(objs); err != nil {
+	if err := c.validateObjectsMappings(objs); err != nil {
 		return err
 	}
 
@@ -84,10 +84,10 @@ func (c *Collection) InsertBatch(ctx context.Context, objs []*objstoreentities.O
 
 // InsertBatch2 is the same as InsertBatch but creates a channel from objs and share it among the worker threads.
 func (c *Collection) InsertBatch2(ctx context.Context, objs []*objstoreentities.Object) error {
-	c.Lock()
-	defer c.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	if err := c.validateObjectsSchema(objs); err != nil {
+	if err := c.validateObjectsMappings(objs); err != nil {
 		return err
 	}
 

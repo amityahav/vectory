@@ -4,10 +4,8 @@ package ent
 
 import (
 	"Vectory/gen/ent/collection"
-	"Vectory/gen/ent/file"
 	"Vectory/gen/ent/predicate"
 	"context"
-	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -23,7 +21,6 @@ type CollectionQuery struct {
 	order      []collection.OrderOption
 	inters     []Interceptor
 	predicates []predicate.Collection
-	withFiles  *FileQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -58,28 +55,6 @@ func (cq *CollectionQuery) Unique(unique bool) *CollectionQuery {
 func (cq *CollectionQuery) Order(o ...collection.OrderOption) *CollectionQuery {
 	cq.order = append(cq.order, o...)
 	return cq
-}
-
-// QueryFiles chains the current query on the "files" edge.
-func (cq *CollectionQuery) QueryFiles() *FileQuery {
-	query := (&FileClient{config: cq.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := cq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := cq.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(collection.Table, collection.FieldID, selector),
-			sqlgraph.To(file.Table, file.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, collection.FilesTable, collection.FilesColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
 }
 
 // First returns the first Collection entity from the query.
@@ -274,22 +249,10 @@ func (cq *CollectionQuery) Clone() *CollectionQuery {
 		order:      append([]collection.OrderOption{}, cq.order...),
 		inters:     append([]Interceptor{}, cq.inters...),
 		predicates: append([]predicate.Collection{}, cq.predicates...),
-		withFiles:  cq.withFiles.Clone(),
 		// clone intermediate query.
 		sql:  cq.sql.Clone(),
 		path: cq.path,
 	}
-}
-
-// WithFiles tells the query-builder to eager-load the nodes that are connected to
-// the "files" edge. The optional arguments are used to configure the query builder of the edge.
-func (cq *CollectionQuery) WithFiles(opts ...func(*FileQuery)) *CollectionQuery {
-	query := (&FileClient{config: cq.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	cq.withFiles = query
-	return cq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -370,11 +333,8 @@ func (cq *CollectionQuery) prepareQuery(ctx context.Context) error {
 
 func (cq *CollectionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Collection, error) {
 	var (
-		nodes       = []*Collection{}
-		_spec       = cq.querySpec()
-		loadedTypes = [1]bool{
-			cq.withFiles != nil,
-		}
+		nodes = []*Collection{}
+		_spec = cq.querySpec()
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Collection).scanValues(nil, columns)
@@ -382,7 +342,6 @@ func (cq *CollectionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*C
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Collection{config: cq.config}
 		nodes = append(nodes, node)
-		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -394,46 +353,7 @@ func (cq *CollectionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*C
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := cq.withFiles; query != nil {
-		if err := cq.loadFiles(ctx, query, nodes,
-			func(n *Collection) { n.Edges.Files = []*File{} },
-			func(n *Collection, e *File) { n.Edges.Files = append(n.Edges.Files, e) }); err != nil {
-			return nil, err
-		}
-	}
 	return nodes, nil
-}
-
-func (cq *CollectionQuery) loadFiles(ctx context.Context, query *FileQuery, nodes []*Collection, init func(*Collection), assign func(*Collection, *File)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[int]*Collection)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
-		}
-	}
-	query.withFKs = true
-	query.Where(predicate.File(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(collection.FilesColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		fk := n.collection_files
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "collection_files" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
-		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "collection_files" returned %v for node %v`, *fk, n.ID)
-		}
-		assign(node, n)
-	}
-	return nil
 }
 
 func (cq *CollectionQuery) sqlCount(ctx context.Context) (int, error) {

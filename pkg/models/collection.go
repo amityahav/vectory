@@ -30,11 +30,11 @@ type Collection struct {
 	// index type
 	IndexType string `json:"index_type,omitempty"`
 
+	// mappings
+	Mappings []string `json:"mappings"`
+
 	// name
 	Name string `json:"name,omitempty"`
-
-	// schema
-	Schema interface{} `json:"schema,omitempty"`
 }
 
 // Validate validates this collection

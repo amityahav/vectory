@@ -20,7 +20,7 @@ import (
 var _ CRUD = &Collection{}
 
 type Collection struct {
-	sync.RWMutex
+	mu          sync.RWMutex
 	id          int
 	name        string
 	dataType    string
@@ -91,11 +91,25 @@ func newCollection(id int, cfg *collection.Collection, filesPath string) (*Colle
 	return &c, nil
 }
 
+// GetConfig returns collection's configurations.
 func (c *Collection) GetConfig() collection.Collection {
 	return c.config
 }
 
-func (c *Collection) validateObjectsSchema(objs []*objstoreentities.Object) error {
+// TODO: currently checking naively the mapping keys but in future check types as well
+func (c *Collection) validateObjectsMappings(objs []*objstoreentities.Object) error {
+	for i, obj := range objs {
+		if len(obj.Properties) != len(c.config.Mappings) {
+			return fmt.Errorf("length mismatch of object number %d properties and collection's mappings", i)
+		}
+
+		for _, m := range c.config.Mappings {
+			if _, ok := obj.Properties[m]; !ok {
+				return fmt.Errorf("object number %d does not have property %s", i, m)
+			}
+		}
+	}
+
 	return nil
 }
 

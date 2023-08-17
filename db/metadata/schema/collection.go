@@ -2,7 +2,6 @@ package schema
 
 import (
 	"entgo.io/ent"
-	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 )
 
@@ -18,12 +17,6 @@ func (Collection) Fields() []ent.Field {
 		field.String("embedder_type"),
 		field.JSON("index_params", map[string]interface{}{}),
 		field.JSON("embedder_config", map[string]interface{}{}),
-		field.JSON("schema", map[string]interface{}{}),
-	}
-}
-
-func (Collection) Edges() []ent.Edge {
-	return []ent.Edge{
-		edge.To("files", File.Type),
+		field.Strings("mappings"),
 	}
 }

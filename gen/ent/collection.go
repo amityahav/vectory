@@ -29,30 +29,9 @@ type Collection struct {
 	IndexParams map[string]interface{} `json:"index_params,omitempty"`
 	// EmbedderConfig holds the value of the "embedder_config" field.
 	EmbedderConfig map[string]interface{} `json:"embedder_config,omitempty"`
-	// Schema holds the value of the "schema" field.
-	Schema map[string]interface{} `json:"schema,omitempty"`
-	// Edges holds the relations/edges for other nodes in the graph.
-	// The values are being populated by the CollectionQuery when eager-loading is set.
-	Edges        CollectionEdges `json:"edges"`
+	// Mappings holds the value of the "mappings" field.
+	Mappings     []string `json:"mappings,omitempty"`
 	selectValues sql.SelectValues
-}
-
-// CollectionEdges holds the relations/edges for other nodes in the graph.
-type CollectionEdges struct {
-	// Files holds the value of the files edge.
-	Files []*File `json:"files,omitempty"`
-	// loadedTypes holds the information for reporting if a
-	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
-}
-
-// FilesOrErr returns the Files value or an error if the edge
-// was not loaded in eager-loading.
-func (e CollectionEdges) FilesOrErr() ([]*File, error) {
-	if e.loadedTypes[0] {
-		return e.Files, nil
-	}
-	return nil, &NotLoadedError{edge: "files"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -60,7 +39,7 @@ func (*Collection) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case collection.FieldIndexParams, collection.FieldEmbedderConfig, collection.FieldSchema:
+		case collection.FieldIndexParams, collection.FieldEmbedderConfig, collection.FieldMappings:
 			values[i] = new([]byte)
 		case collection.FieldID:
 			values[i] = new(sql.NullInt64)
@@ -127,12 +106,12 @@ func (c *Collection) assignValues(columns []string, values []any) error {
 					return fmt.Errorf("unmarshal field embedder_config: %w", err)
 				}
 			}
-		case collection.FieldSchema:
+		case collection.FieldMappings:
 			if value, ok := values[i].(*[]byte); !ok {
-				return fmt.Errorf("unexpected type %T for field schema", values[i])
+				return fmt.Errorf("unexpected type %T for field mappings", values[i])
 			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &c.Schema); err != nil {
-					return fmt.Errorf("unmarshal field schema: %w", err)
+				if err := json.Unmarshal(*value, &c.Mappings); err != nil {
+					return fmt.Errorf("unmarshal field mappings: %w", err)
 				}
 			}
 		default:
@@ -146,11 +125,6 @@ func (c *Collection) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (c *Collection) Value(name string) (ent.Value, error) {
 	return c.selectValues.Get(name)
-}
-
-// QueryFiles queries the "files" edge of the Collection entity.
-func (c *Collection) QueryFiles() *FileQuery {
-	return NewCollectionClient(c.config).QueryFiles(c)
 }
 
 // Update returns a builder for updating this Collection.
@@ -194,8 +168,8 @@ func (c *Collection) String() string {
 	builder.WriteString("embedder_config=")
 	builder.WriteString(fmt.Sprintf("%v", c.EmbedderConfig))
 	builder.WriteString(", ")
-	builder.WriteString("schema=")
-	builder.WriteString(fmt.Sprintf("%v", c.Schema))
+	builder.WriteString("mappings=")
+	builder.WriteString(fmt.Sprintf("%v", c.Mappings))
 	builder.WriteByte(')')
 	return builder.String()
 }
