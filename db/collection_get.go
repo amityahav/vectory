@@ -1,6 +1,7 @@
 package db
 
 import (
+	"Vectory/entities/collection"
 	objstoreentities "Vectory/entities/objstore"
 	"context"
 	"github.com/pkg/errors"
@@ -29,7 +30,7 @@ func (c *Collection) Get(objIds []uint64) ([]objstoreentities.Object, error) {
 }
 
 // SemanticSearch returns the approximate k-nn of obj.
-func (c *Collection) SemanticSearch(ctx context.Context, obj *objstoreentities.Object, k int) ([]*objstoreentities.Object, error) {
+func (c *Collection) SemanticSearch(ctx context.Context, obj *objstoreentities.Object, k int) (*collection.SemanticSearchResult, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -44,5 +45,25 @@ func (c *Collection) SemanticSearch(ctx context.Context, obj *objstoreentities.O
 		ids = append(ids, e.Id)
 	}
 
-	return c.objStore.GetObjects(ids) // TODO: support returning distances, vectors of objects as well
+	objs, err := c.objStore.GetObjects(ids)
+	if err != nil {
+		return nil, err
+	}
+
+	res := collection.SemanticSearchResult{
+		Hits: len(results),
+	}
+
+	resObjs := make([]objstoreentities.ObjectWithDistance, 0, len(results))
+	for i := 0; i < len(results); i++ {
+		resObjs = append(resObjs, objstoreentities.ObjectWithDistance{
+			Id:         objs[i].Id,
+			Properties: objs[i].Properties,
+			Distance:   results[i].Distance,
+		})
+	}
+
+	res.Objects = resObjs
+
+	return &res, nil
 }

@@ -7,16 +7,17 @@ import (
 	"math"
 )
 
-const (
-	Text = iota
-	Image
-)
-
 type Object struct {
 	Id uint64
 	//DataType int // TODO: currently supports only text objects
 	Properties map[string]interface{}
 	Vector     []float32
+}
+
+type ObjectWithDistance struct {
+	Id         uint64
+	Properties map[string]interface{}
+	Distance   float32
 }
 
 func (o *Object) Serialize() ([]byte, error) {
@@ -82,6 +83,9 @@ func (o *Object) FlatProperties() string { // TODO: better handle different type
 	var res string
 
 	for k, v := range o.Properties {
+		if v == nil {
+			continue
+		}
 		res += fmt.Sprintf("%s: %v,", k, v)
 	}
 

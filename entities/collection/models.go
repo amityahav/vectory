@@ -1,5 +1,7 @@
 package collection
 
+import "Vectory/entities/objstore"
+
 const (
 	TextDataType = "text"
 )
@@ -26,4 +28,9 @@ type Collection struct {
 
 	// mappings
 	Mappings []string `json:"mappings"`
+}
+
+type SemanticSearchResult struct {
+	Hits    int                           `json:"hits"`
+	Objects []objstore.ObjectWithDistance `json:"objects"`
 }

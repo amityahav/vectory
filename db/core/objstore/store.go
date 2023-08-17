@@ -57,7 +57,7 @@ func (s *ObjectStore) GetObject(id uint64) (*objstore.Object, bool, error) {
 }
 
 func (s *ObjectStore) GetObjects(ids []uint64) ([]*objstore.Object, error) {
-	objects := make([]*objstore.Object, len(ids))
+	objects := make([]*objstore.Object, 0, len(ids))
 	for _, id := range ids {
 		object, found, err := s.GetObject(id)
 		if err != nil {
@@ -84,4 +84,8 @@ func (s *ObjectStore) Delete(id uint64) error {
 // TODO: we can do better
 func (s *ObjectStore) GetStore() *bitcask.Bitcask {
 	return s.db
+}
+
+func (s *ObjectStore) Size() int {
+	return s.db.Len()
 }

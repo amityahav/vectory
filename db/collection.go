@@ -96,10 +96,15 @@ func (c *Collection) GetConfig() collection.Collection {
 	return c.config
 }
 
+// GetSize returns the number of objects in the collection.
+func (c *Collection) GetSize() int {
+	return c.objStore.Size()
+}
+
 // TODO: currently checking naively the mapping keys but in future check types as well
 func (c *Collection) validateObjectsMappings(objs []*objstoreentities.Object) error {
 	for i, obj := range objs {
-		if len(obj.Properties) != len(c.config.Mappings) {
+		if len(obj.Properties) > len(c.config.Mappings) {
 			return fmt.Errorf("length mismatch of object number %d properties and collection's mappings", i)
 		}
 
