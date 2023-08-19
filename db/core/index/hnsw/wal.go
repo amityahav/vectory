@@ -3,7 +3,9 @@ package hnsw
 import (
 	"encoding/binary"
 	"github.com/pkg/errors"
-	w "github.com/rosedblabs/wal"
+	w "github.com/tidwall/wal"
+	"io"
+	"sync"
 )
 
 const (
@@ -13,36 +15,42 @@ const (
 	addConnectionAtLevel
 )
 
-// TODO: should find/create a wal that supports batch writes for batch inserts
 type wal struct {
-	f *w.WAL // wal operations are guarded internally by a lock
+	mu     sync.RWMutex
+	f      *w.Log // wal operations are guarded internally by a lock
+	batch  *w.Batch
+	seqNum uint64
 }
 
 func newWal(path string) (*wal, error) {
-	f, err := w.Open(w.Options{
-		DirPath:       path,
-		SegmentSize:   w.GB,
-		SementFileExt: ".SEG",
-		BlockCache:    32 * w.KB * 10,
-		Sync:          false,
-		BytesPerSync:  0,
-	})
+	f, err := w.Open(path, w.DefaultOptions)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed opening WAL at %s", path)
 	}
 
-	return &wal{f: f}, nil
-}
+	n, err := f.LastIndex()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed retrieving WAL's last sequence number")
+	}
+	n++
 
-func (w *wal) walReader() *w.Reader {
-	return w.f.NewReader()
+	return &wal{f: f,
+		batch:  new(w.Batch),
+		seqNum: n,
+	}, nil
 }
 
 func (w *wal) flush() error {
-	return w.f.Sync()
+	if err := w.f.WriteBatch(w.batch); err != nil {
+		return err
+	}
+
+	w.batch.Clear()
+
+	return nil
 }
 
-func (w *wal) addVertex(v *Vertex) error {
+func (w *wal) addVertex(v *Vertex) {
 	/*
 		bytes = [opcode, v.id, level], len(bytes) = 1 + 8 + 4
 	*/
@@ -53,12 +61,10 @@ func (w *wal) addVertex(v *Vertex) error {
 	binary.LittleEndian.PutUint64(bytes[1:9], v.id)
 	binary.LittleEndian.PutUint32(bytes[9:], uint32(level))
 
-	_, err := w.f.Write(bytes)
-
-	return err
+	w.writeBatch(bytes)
 }
 
-func (w *wal) setEntryPointWithMaxLayer(id uint64, level int) error {
+func (w *wal) setEntryPointWithMaxLayer(id uint64, level int) {
 	/*
 		bytes = [opcode, id, level], len(bytes) = 1 + 8 + 4
 	*/
@@ -69,12 +75,10 @@ func (w *wal) setEntryPointWithMaxLayer(id uint64, level int) error {
 	binary.LittleEndian.PutUint64(bytes[1:9], id)
 	binary.LittleEndian.PutUint32(bytes[9:], uint32(level))
 
-	_, err := w.f.Write(bytes)
-
-	return err
+	w.writeBatch(bytes)
 }
 
-func (w *wal) setConnectionsAtLevel(id uint64, level int, neighbors []uint64) error {
+func (w *wal) setConnectionsAtLevel(id uint64, level int, neighbors []uint64) {
 	/*
 		bytes = [opcode, id, level, len(neighbors), neighbors], len(bytes) = 1 + 8 + 4 + 4 + 8*len(neighbors)
 	*/
@@ -92,12 +96,10 @@ func (w *wal) setConnectionsAtLevel(id uint64, level int, neighbors []uint64) er
 		offset += 8
 	}
 
-	_, err := w.f.Write(bytes)
-
-	return err
+	w.writeBatch(bytes)
 }
 
-func (w *wal) addConnectionAtLevel(id uint64, level int, n uint64) error {
+func (w *wal) addConnectionAtLevel(id uint64, level int, n uint64) {
 	/*
 		bytes = [opcode, id, level, nid], len(bytes) = 1 + 8 + 4 + 8
 	*/
@@ -109,7 +111,44 @@ func (w *wal) addConnectionAtLevel(id uint64, level int, n uint64) error {
 	binary.LittleEndian.PutUint32(bytes[9:13], uint32(level))
 	binary.LittleEndian.PutUint64(bytes[13:], n)
 
-	_, err := w.f.Write(bytes)
+	w.writeBatch(bytes)
+}
 
-	return err
+func (w *wal) read(seqNum uint64) ([]byte, error) {
+	return w.f.Read(seqNum)
+}
+
+func (w *wal) writeBatch(data []byte) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	w.batch.Write(w.seqNum, data)
+	w.seqNum++
+}
+
+type walReader struct {
+	wal *wal
+	pos uint64
+}
+
+func (w *wal) walReader() *walReader {
+	return &walReader{
+		wal: w,
+		pos: 1,
+	}
+}
+
+func (r *walReader) Next() ([]byte, error) {
+	data, err := r.wal.read(r.pos)
+	if err != nil {
+		if err == w.ErrNotFound {
+			return nil, io.EOF
+		}
+
+		return nil, err
+	}
+
+	r.pos++
+
+	return data, nil
 }

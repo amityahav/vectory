@@ -197,7 +197,7 @@ func BenchmarkCollection_InsertBatch(b *testing.B) {
 		IndexParams: index.HnswParams{
 			M:              32,
 			MMax:           64,
-			EfConstruction: 400,
+			EfConstruction: 200,
 			Ef:             100,
 			Heuristic:      true,
 			DistanceType:   distance.Euclidean,
@@ -207,7 +207,7 @@ func BenchmarkCollection_InsertBatch(b *testing.B) {
 	require.NoError(b, err)
 
 	dim := 128
-	objects := make([]*objstore.Object, 10000)
+	objects := make([]*objstore.Object, 100000)
 	for i := 0; i < len(objects); i++ {
 		objects[i] = &objstore.Object{
 			Id: 0,
