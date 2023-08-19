@@ -39,9 +39,7 @@ func (h *Hnsw) Insert(vector []float32, vectorId uint64) error {
 	vertexLayer := h.calculateLevelForVertex()
 	v.Init(vertexLayer+1, h.mMax, h.mMax0)
 
-	if err = h.wal.addVertex(&v); err != nil {
-		return err
-	}
+	h.wal.addVertex(&v)
 
 	h.Lock()
 	h.nodes[v.id] = &v
@@ -72,9 +70,7 @@ func (h *Hnsw) Insert(vector []float32, vectorId uint64) error {
 		nearestNeighbors = h.searchLayer(&v, eps, h.efConstruction, l)
 		neighbors := h.selectNeighbors(&v, nearestNeighbors, h.m)
 
-		if err = h.wal.setConnectionsAtLevel(v.id, int(l), neighbors); err != nil {
-			return err
-		}
+		h.wal.setConnectionsAtLevel(v.id, int(l), neighbors)
 
 		v.SetConnections(l, neighbors)
 
@@ -91,10 +87,7 @@ func (h *Hnsw) Insert(vector []float32, vectorId uint64) error {
 			connections := nVertex.GetConnections(l)
 
 			if len(connections) < maxConn {
-				if err = h.wal.addConnectionAtLevel(n, int(l), v.id); err != nil {
-					return err
-				}
-
+				h.wal.addConnectionAtLevel(n, int(l), v.id)
 				nVertex.AddConnection(l, v.id)
 			} else { // pruning
 				elems := make([]utils.Element, 0, len(connections)+1)
@@ -113,11 +106,7 @@ func (h *Hnsw) Insert(vector []float32, vectorId uint64) error {
 				}
 
 				newNeighbors := h.selectNeighbors(nVertex, elems, maxConn)
-
-				if err = h.wal.setConnectionsAtLevel(n, int(l), newNeighbors); err != nil {
-					return err
-				}
-
+				h.wal.setConnectionsAtLevel(n, int(l), newNeighbors)
 				nVertex.SetConnections(l, newNeighbors)
 			}
 			nVertex.Unlock()
@@ -128,11 +117,7 @@ func (h *Hnsw) Insert(vector []float32, vectorId uint64) error {
 
 	h.Lock()
 	if vertexLayer > currentMaxLayer {
-		if err = h.wal.setEntryPointWithMaxLayer(v.id, int(vertexLayer)); err != nil {
-			h.Unlock()
-			return nil
-		}
-
+		h.wal.setEntryPointWithMaxLayer(v.id, int(vertexLayer))
 		h.entrypointID = v.id
 		h.currentMaxLayer = vertexLayer
 	}
@@ -147,17 +132,12 @@ func (h *Hnsw) insertFirstVertex(v *Vertex) error {
 
 	v.Init(1, -1, h.mMax0)
 
-	if err := h.wal.setEntryPointWithMaxLayer(v.id, 0); err != nil {
-		return err
-	}
+	h.wal.setEntryPointWithMaxLayer(v.id, 0)
 
 	h.entrypointID = v.id
 	h.currentMaxLayer = 0
 
-	if err := h.wal.addVertex(v); err != nil {
-		return err
-	}
-
+	h.wal.addVertex(v)
 	h.nodes[v.id] = v
 
 	return nil
