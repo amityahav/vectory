@@ -299,18 +299,19 @@ func BenchmarkCollection_InsertBatch2(b *testing.B) {
 		IndexType: index.Hnsw,
 		DataType:  "text",
 		IndexParams: index.HnswParams{
-			M:              64,
-			MMax:           128,
+			M:              32,
+			MMax:           64,
 			EfConstruction: 400,
 			Ef:             100,
 			Heuristic:      true,
 			DistanceType:   distance.Euclidean,
 		},
+		Mappings: []string{"title", "content"},
 	})
 	require.NoError(b, err)
 
 	dim := 128
-	objects := make([]*objstore.Object, 10000)
+	objects := make([]*objstore.Object, 100000)
 	for i := 0; i < len(objects); i++ {
 		objects[i] = &objstore.Object{
 			Id: 0,
