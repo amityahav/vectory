@@ -50,7 +50,11 @@ func (s *ObjectStore) GetObject(id uint64) (*objstore.Object, bool, error) {
 	}
 
 	obj := objstore.Object{}
-	obj.Deserialize(res)
+	err = obj.Deserialize(res)
+	if err != nil {
+		return nil, false, err
+	}
+
 	obj.Id = id
 
 	return &obj, true, nil
