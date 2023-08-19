@@ -9,13 +9,17 @@ import (
 
 // loadFromWAL builds index from wal if exists
 func (h *Hnsw) loadFromWAL() error {
-	walReader := h.wal.walReader()
+	r := h.wal.walReader()
 	d := deserializer{state: h}
 
 	for {
-		record, _, err := walReader.Next()
-		if err == io.EOF {
-			break
+		record, err := r.Next()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+
+			return err
 		}
 
 		if err = d.restore(record); err != nil {

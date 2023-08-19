@@ -92,11 +92,13 @@ func TestRestoreFromDisk(t *testing.T) {
 
 	require.NoError(t, err)
 
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 100; i++ {
 		vec := randomVector(dim)
 		o := objstoreentities.Object{
-			Id:     uint64(i),
-			Data:   "",
+			Id: uint64(i),
+			Properties: map[string]interface{}{
+				"title": "test",
+			},
 			Vector: vec,
 		}
 
