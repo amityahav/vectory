@@ -3,7 +3,6 @@ package main
 import (
 	"Vectory/db"
 	"Vectory/entities/collection"
-	"Vectory/entities/distance"
 	"Vectory/entities/embeddings/hugging_face/text2vec"
 	"Vectory/entities/index"
 	"Vectory/entities/objstore"
@@ -16,22 +15,6 @@ import (
 	"os"
 )
 
-type Review struct {
-	Points              string `json:"points,omitempty"`
-	Title               string `json:"title,omitempty"`
-	Description         string `json:"description,omitempty"`
-	TasterName          string `json:"taster_name,omitempty"`
-	TasterTwitterHandle string `json:"taster_twitter_handle,omitempty"`
-	Price               int    `json:"price,omitempty"`
-	Designation         string `json:"designation,omitempty"`
-	Variety             string `json:"variety,omitempty"`
-	Region1             string `json:"region_1,omitempty"`
-	Region2             string `json:"region_2,omitempty"`
-	Province            string `json:"province,omitempty"`
-	Country             string `json:"country,omitempty"`
-	Winery              string `json:"winery,omitempty"`
-}
-
 func main() {
 	ctx := context.Background()
 	vectory, err := db.Open("./data")
@@ -39,7 +22,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	collection, err := collectionLoadOrCreate(ctx, vectory, &collection.Collection{
+	c, err := collectionLoadOrCreate(ctx, vectory, &collection.Collection{
 		Name:         "wine reviews",
 		IndexType:    index.Hnsw,
 		DataType:     collection.TextDataType,
@@ -47,14 +30,7 @@ func main() {
 		EmbedderConfig: text2vec.Config{
 			ApiKey: os.Getenv("API_KEY"),
 		},
-		IndexParams: &index.HnswParams{
-			M:              64,
-			MMax:           64,
-			EfConstruction: 400,
-			Ef:             100,
-			Heuristic:      true,
-			DistanceType:   distance.DotProduct,
-		},
+		IndexParams: &index.DefaultHnswParams,
 		Mappings: []string{"points",
 			"title",
 			"description",
@@ -73,15 +49,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if collection.GetSize() == 0 {
-		objects := loadReviews(500)
-		err = collection.InsertBatch(ctx, objects)
-		if err != nil {
-			log.Fatal(err)
-		}
+	objects := loadReviews(500)
+	err = c.InsertBatch(ctx, objects)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	res, err := collection.SemanticSearch(ctx, &objstore.Object{
+	res, err := c.SemanticSearch(ctx, &objstore.Object{
 		Properties: map[string]interface{}{
 			"question": "whats the best red wine in italy?",
 		},

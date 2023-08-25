@@ -1,5 +1,7 @@
 package index
 
+import "Vectory/entities/distance"
+
 const (
 	Hnsw    = "hnsw"
 	DiskAnn = "disk_ann"
@@ -20,4 +22,13 @@ type HnswParams struct {
 	Heuristic bool `json:"heuristic"`
 
 	DistanceType string `json:"distance_type"`
+}
+
+var DefaultHnswParams = HnswParams{
+	M:              64,
+	MMax:           128,
+	EfConstruction: 100,
+	Ef:             100,
+	Heuristic:      true,
+	DistanceType:   distance.Euclidean,
 }

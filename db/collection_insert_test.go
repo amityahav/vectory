@@ -3,7 +3,6 @@ package db
 import (
 	"Vectory/db/embeddings"
 	"Vectory/entities/collection"
-	"Vectory/entities/distance"
 	"Vectory/entities/embeddings/hugging_face/text2vec"
 	"Vectory/entities/index"
 	"Vectory/entities/objstore"
@@ -32,18 +31,11 @@ func TestCollection(t *testing.T) {
 
 	{
 		c, err := db.CreateCollection(ctx, &collection.Collection{
-			Name:      "test_collection",
-			IndexType: index.Hnsw,
-			DataType:  "text",
-			IndexParams: index.HnswParams{
-				M:              64,
-				MMax:           128,
-				EfConstruction: 100,
-				Ef:             100,
-				Heuristic:      true,
-				DistanceType:   distance.Euclidean,
-			},
-			Mappings: []string{"title", "content"},
+			Name:        "test_collection",
+			IndexType:   index.Hnsw,
+			DataType:    "text",
+			IndexParams: index.DefaultHnswParams,
+			Mappings:    []string{"title", "content"},
 		})
 		require.NoError(t, err)
 
@@ -106,15 +98,8 @@ func TestCollection(t *testing.T) {
 			IndexType:    index.Hnsw,
 			EmbedderType: embeddings.FakeEmbedder,
 			DataType:     "text",
-			IndexParams: index.HnswParams{
-				M:              64,
-				MMax:           128,
-				EfConstruction: 100,
-				Ef:             100,
-				Heuristic:      true,
-				DistanceType:   distance.Euclidean,
-			},
-			Mappings: []string{"title", "content"},
+			IndexParams:  index.DefaultHnswParams,
+			Mappings:     []string{"title", "content"},
 		})
 		require.NoError(t, err)
 
@@ -173,10 +158,6 @@ func TestCollection(t *testing.T) {
 
 }
 
-func TestRecall(t *testing.T) {
-
-}
-
 func BenchmarkCollection_InsertBatch(b *testing.B) {
 	defer profile.Start(profile.CPUProfile, profile.ProfilePath("./profile")).Stop()
 	b.ResetTimer()
@@ -191,18 +172,11 @@ func BenchmarkCollection_InsertBatch(b *testing.B) {
 	defer os.RemoveAll(filesPath)
 
 	c, err := db.CreateCollection(ctx, &collection.Collection{
-		Name:      "test_collection",
-		IndexType: index.Hnsw,
-		DataType:  "text",
-		IndexParams: index.HnswParams{
-			M:              32,
-			MMax:           64,
-			EfConstruction: 200,
-			Ef:             100,
-			Heuristic:      true,
-			DistanceType:   distance.Euclidean,
-		},
-		Mappings: []string{"title", "content"},
+		Name:        "test_collection",
+		IndexType:   index.Hnsw,
+		DataType:    "text",
+		IndexParams: index.DefaultHnswParams,
+		Mappings:    []string{"title", "content"},
 	})
 	require.NoError(b, err)
 
@@ -249,16 +223,9 @@ func BenchmarkCollection_InsertBatch_WithEmbedder(b *testing.B) {
 		EmbedderConfig: text2vec.Config{
 			ApiKey: os.Getenv("api_key"),
 		},
-		DataType: "text",
-		IndexParams: index.HnswParams{
-			M:              64,
-			MMax:           128,
-			EfConstruction: 400,
-			Ef:             100,
-			Heuristic:      true,
-			DistanceType:   distance.Euclidean,
-		},
-		Mappings: []string{"title", "content"},
+		DataType:    "text",
+		IndexParams: index.DefaultHnswParams,
+		Mappings:    []string{"title", "content"},
 	})
 	require.NoError(b, err)
 
@@ -295,18 +262,11 @@ func BenchmarkCollection_InsertBatch2(b *testing.B) {
 	defer os.RemoveAll(filesPath)
 
 	c, err := db.CreateCollection(ctx, &collection.Collection{
-		Name:      "test_collection",
-		IndexType: index.Hnsw,
-		DataType:  "text",
-		IndexParams: index.HnswParams{
-			M:              32,
-			MMax:           64,
-			EfConstruction: 400,
-			Ef:             100,
-			Heuristic:      true,
-			DistanceType:   distance.Euclidean,
-		},
-		Mappings: []string{"title", "content"},
+		Name:        "test_collection",
+		IndexType:   index.Hnsw,
+		DataType:    "text",
+		IndexParams: index.DefaultHnswParams,
+		Mappings:    []string{"title", "content"},
 	})
 	require.NoError(b, err)
 

@@ -2,7 +2,6 @@ package hnsw
 
 import (
 	"Vectory/db/core/objstore"
-	"Vectory/entities/distance"
 	"Vectory/entities/index"
 	objstoreentities "Vectory/entities/objstore"
 	"fmt"
@@ -81,14 +80,7 @@ func TestRestoreFromDisk(t *testing.T) {
 	require.NoError(t, err)
 
 	dim := 128
-	h, err := NewHnsw(index.HnswParams{
-		M:              64,
-		MMax:           128,
-		EfConstruction: 100,
-		Ef:             100,
-		Heuristic:      true,
-		DistanceType:   distance.Euclidean,
-	}, filesPath, store)
+	h, err := NewHnsw(index.DefaultHnswParams, filesPath, store)
 
 	require.NoError(t, err)
 
@@ -110,14 +102,7 @@ func TestRestoreFromDisk(t *testing.T) {
 
 	// create new hnsw and restore from wal
 	start := time.Now()
-	hRestored, err := NewHnsw(index.HnswParams{
-		M:              64,
-		MMax:           128,
-		EfConstruction: 100,
-		Ef:             100,
-		Heuristic:      true,
-		DistanceType:   distance.Euclidean,
-	}, filesPath, store)
+	hRestored, err := NewHnsw(index.DefaultHnswParams, filesPath, store)
 	require.NoError(t, err)
 
 	end := time.Since(start)
