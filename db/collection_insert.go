@@ -131,9 +131,8 @@ func (c *Collection) InsertBatch2(ctx context.Context, objs []*objstoreentities.
 }
 
 // insert handles the actual insertion of the object both to the object storage and index.
-// it will also creates an embedding for the data if vector is not specified.
+// it will also create an embedding for the data if vector is not specified.
 func (c *Collection) insert(obj *objstoreentities.Object) error {
-	// TODO: validate obj data type is the same as collection's
 	id, err := c.idCounter.FetchAndInc()
 	if err != nil {
 		return err

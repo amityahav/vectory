@@ -25,6 +25,7 @@ type Hnsw struct {
 	entrypointID     uint64
 	currentMaxLayer  int64
 	nodes            map[uint64]*Vertex
+	deletedNodes     map[uint64]struct{}
 	distFunc         func([]float32, []float32) float32
 	selectNeighbors  func(*Vertex, []utils.Element, int) []uint64
 	initialInsertion *sync.Once
@@ -39,6 +40,7 @@ func NewHnsw(params indexentities.HnswParams, filesPath string, store *objstore.
 		ef:               params.Ef,
 		efConstruction:   params.EfConstruction,
 		nodes:            make(map[uint64]*Vertex), // TODO: change to an array
+		deletedNodes:     map[uint64]struct{}{},
 		initialInsertion: &sync.Once{},
 		filesPath:        fmt.Sprintf("%s/%s", filesPath, "index"),
 	}

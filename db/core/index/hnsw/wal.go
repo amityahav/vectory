@@ -17,7 +17,7 @@ const (
 
 type wal struct {
 	mu     sync.RWMutex
-	f      *w.Log // wal operations are guarded internally by a lock
+	f      *w.Log
 	batch  *w.Batch
 	seqNum uint64
 }

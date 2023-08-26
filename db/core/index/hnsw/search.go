@@ -34,8 +34,19 @@ func (h *Hnsw) Search(q []float32, k int) []utils.Element {
 
 	minHeap := utils.NewMinHeapFromSlice(currentNearestElements)
 
-	for i := 0; i < k && minHeap.Len() > 0; i++ {
-		res = append(res, heap.Pop(minHeap).(utils.Element))
+	var i int
+	for minHeap.Len() > 0 {
+		if i == k {
+			break
+		}
+
+		e := heap.Pop(minHeap).(utils.Element)
+		if _, ok := h.deletedNodes[e.Id]; ok {
+			continue
+		}
+
+		res = append(res, e)
+		i++
 	}
 
 	return res
