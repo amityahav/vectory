@@ -18,8 +18,14 @@ func TestObject(t *testing.T) {
 		b, err := obj.SerializeProperties()
 		require.NoError(t, err)
 
+		v, err := obj.SerializeVector()
+		require.NoError(t, err)
+
 		obj2 := Object{}
 		err = obj2.DeserializeProperties(b)
+		require.NoError(t, err)
+
+		err = obj2.DeserializeVector(v)
 		require.NoError(t, err)
 
 		require.Equal(t, obj, obj2)
