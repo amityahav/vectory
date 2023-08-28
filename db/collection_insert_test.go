@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-func TestCollection(t *testing.T) {
+func TestCollection_Insert(t *testing.T) {
 	ctx := context.Background()
 	filesPath := "./tmp"
 
@@ -110,6 +110,7 @@ func TestCollection(t *testing.T) {
 					"title":   "Test",
 					"content": "blah",
 				},
+				Vector: vec,
 			}
 
 			err = c.Insert(ctx, &obj)

@@ -21,6 +21,8 @@ func (d *deserializer) restore(record []byte) error {
 		d.setConnectionsAtLevel(record[1:])
 	case addConnectionAtLevel:
 		d.addConnectionAtLevel(record[1:])
+	case deleteVertex:
+		d.deleteVertex(record[1:])
 	default:
 		return fmt.Errorf("unkown opcode %d", op)
 	}
@@ -93,4 +95,13 @@ func (d *deserializer) setConnectionsAtLevel(record []byte) {
 	}
 
 	v.SetConnections(int64(level), neighbors)
+}
+
+func (d *deserializer) deleteVertex(record []byte) {
+	var offset int
+
+	id := binary.LittleEndian.Uint64(record[offset:])
+	offset += 8
+
+	d.state.deletedNodes[id] = struct{}{}
 }

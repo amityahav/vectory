@@ -140,7 +140,7 @@ func (c *Collection) insert(obj *objstoreentities.Object) error {
 
 	obj.Id = id
 
-	if err = c.objStore.Put(obj); err != nil {
+	if err = c.stores.PutObject(obj); err != nil {
 		return err
 	}
 

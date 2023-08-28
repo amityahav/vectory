@@ -20,13 +20,13 @@ type ObjectWithDistance struct {
 	Distance   float32
 }
 
-func (o *Object) Serialize() ([]byte, error) {
+func (o *Object) SerializeProperties() ([]byte, error) {
 	propertiesJSON, err := json.Marshal(o.Properties)
 	if err != nil {
 		return nil, err
 	}
 
-	b := make([]byte, 4+len(propertiesJSON)+4+4*len(o.Vector)) // PropertiesLen + Properties + VecDim + Vector
+	b := make([]byte, 4+len(propertiesJSON)) // PropertiesLen + Properties
 
 	var offset int
 
@@ -39,18 +39,10 @@ func (o *Object) Serialize() ([]byte, error) {
 	copy(b[offset:], propertiesJSON)
 	offset += len(propertiesJSON)
 
-	binary.LittleEndian.PutUint32(b[offset:], uint32(len(o.Vector)))
-	offset += 4
-
-	for _, f := range o.Vector {
-		binary.LittleEndian.PutUint32(b[offset:], math.Float32bits(f))
-		offset += 4
-	}
-
 	return b, nil
 }
 
-func (o *Object) Deserialize(object []byte) error {
+func (o *Object) DeserializeProperties(object []byte) error {
 	var offset int
 
 	//o.DataType = int(binary.LittleEndian.Uint32(object[offset:]))
@@ -65,12 +57,33 @@ func (o *Object) Deserialize(object []byte) error {
 	}
 	offset += propertiesLen
 
-	dim := int(binary.LittleEndian.Uint32(object[offset:]))
+	return nil
+}
+
+func (o *Object) SerializeVector() ([]byte, error) {
+	var offset int
+	b := make([]byte, 4+4*len(o.Vector)) // VecDim + Vector
+
+	binary.LittleEndian.PutUint32(b[offset:], uint32(len(o.Vector)))
+	offset += 4
+
+	for _, f := range o.Vector {
+		binary.LittleEndian.PutUint32(b[offset:], math.Float32bits(f))
+		offset += 4
+	}
+
+	return b, nil
+}
+
+func (o *Object) DeserializeVector(vector []byte) error {
+	var offset int
+
+	dim := int(binary.LittleEndian.Uint32(vector[offset:]))
 	offset += 4
 
 	vec := make([]float32, dim)
 	for i := 0; i < dim; i++ {
-		vec[i] = math.Float32frombits(binary.LittleEndian.Uint32(object[offset:]))
+		vec[i] = math.Float32frombits(binary.LittleEndian.Uint32(vector[offset:]))
 		offset += 4
 	}
 

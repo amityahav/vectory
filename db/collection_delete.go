@@ -4,8 +4,7 @@ import "github.com/pkg/errors"
 
 // Delete deletes an object with objId from the collection.
 func (c *Collection) Delete(objId uint64) error {
-	// TODO: delete in objStore and in index
-	_, found, err := c.objStore.GetObject(objId)
+	_, found, err := c.stores.GetObject(objId)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting %d from object store", objId)
 	}
@@ -18,7 +17,7 @@ func (c *Collection) Delete(objId uint64) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	err = c.objStore.Delete(objId)
+	err = c.stores.DeleteObject(objId)
 	if err != nil {
 		return errors.Wrapf(err, "failed deleting %d from object store", objId)
 	}

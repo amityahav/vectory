@@ -15,11 +15,11 @@ func TestObject(t *testing.T) {
 			Vector: []float32{0.123, 0.12, 12, 12.3},
 		}
 
-		b, err := obj.Serialize()
+		b, err := obj.SerializeProperties()
 		require.NoError(t, err)
 
 		obj2 := Object{}
-		err = obj2.Deserialize(b)
+		err = obj2.DeserializeProperties(b)
 		require.NoError(t, err)
 
 		require.Equal(t, obj, obj2)

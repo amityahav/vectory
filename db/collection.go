@@ -24,7 +24,7 @@ type Collection struct {
 	id          int
 	name        string
 	dataType    string
-	objStore    *objstore.ObjectStore
+	stores      *objstore.Stores
 	vectorIndex index.VectorIndex
 	idCounter   *IdCounter
 	logger      any
@@ -45,12 +45,12 @@ func newCollection(id int, cfg *collection.Collection, filesPath string) (*Colle
 
 	c.filesPath = fmt.Sprintf("%s/%s", filesPath, c.name)
 
-	os, err := objstore.NewObjectStore(c.filesPath)
+	os, err := objstore.NewStores(c.filesPath)
 	if err != nil {
 		return nil, err
 	}
 
-	c.objStore = os
+	c.stores = os
 
 	counter, err := newIdCounter(c.filesPath)
 	if err != nil {
@@ -98,7 +98,7 @@ func (c *Collection) GetConfig() collection.Collection {
 
 // GetSize returns the number of objects in the collection.
 func (c *Collection) GetSize() int {
-	return c.objStore.Size()
+	return c.stores.Size()
 }
 
 // TODO: currently checking naively the mapping keys but in future check types as well

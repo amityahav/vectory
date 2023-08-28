@@ -14,7 +14,7 @@ func (c *Collection) Get(objIds []uint64) ([]objstoreentities.Object, error) {
 
 	objects := make([]objstoreentities.Object, 0, len(objIds))
 	for _, id := range objIds {
-		obj, found, err := c.objStore.GetObject(id)
+		obj, found, err := c.stores.GetObject(id)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting %d from object store", id)
 		}
@@ -45,7 +45,7 @@ func (c *Collection) SemanticSearch(ctx context.Context, obj *objstoreentities.O
 		ids = append(ids, e.Id)
 	}
 
-	objs, err := c.objStore.GetObjects(ids)
+	objs, err := c.stores.GetObjects(ids)
 	if err != nil {
 		return nil, err
 	}

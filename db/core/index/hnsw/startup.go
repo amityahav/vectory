@@ -32,20 +32,21 @@ func (h *Hnsw) loadFromWAL() error {
 
 // populateVerticesVectors prefetches all vectors from the object storage
 // TODO: optimize it by implementing simple in-house KV store?
-func (h *Hnsw) populateVerticesVectors(store *objstore.ObjectStore) error {
+func (h *Hnsw) populateVerticesVectors(store *objstore.Stores) error {
 	if store == nil {
 		return nil
 	}
 
-	s := store.GetStore()
+	s := store.GetVectorsStore()
 
 	for k := range s.Keys() {
-		o, _, err := store.GetObject(binary.LittleEndian.Uint64(k))
+		id := binary.LittleEndian.Uint64(k)
+		vec, _, err := store.GetVector(id)
 		if err != nil {
 			return err
 		}
 
-		h.nodes[o.Id].vector = o.Vector
+		h.nodes[id].vector = vec
 	}
 
 	return nil

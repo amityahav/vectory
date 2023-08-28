@@ -13,6 +13,7 @@ const (
 	SetEntryPointWithMaxLayer
 	SetConnectionsAtLevel
 	addConnectionAtLevel
+	deleteVertex
 )
 
 type wal struct {
@@ -110,6 +111,19 @@ func (w *wal) addConnectionAtLevel(id uint64, level int, n uint64) {
 	binary.LittleEndian.PutUint64(bytes[1:9], id)
 	binary.LittleEndian.PutUint32(bytes[9:13], uint32(level))
 	binary.LittleEndian.PutUint64(bytes[13:], n)
+
+	w.writeBatch(bytes)
+}
+
+func (w *wal) deleteVertex(id uint64) {
+	/*
+		bytes = [opcode, id] = 1 + 8
+	*/
+
+	bytes := make([]byte, 9)
+
+	bytes[0] = deleteVertex
+	binary.LittleEndian.PutUint64(bytes[1:9], id)
 
 	w.writeBatch(bytes)
 }

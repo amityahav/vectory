@@ -33,7 +33,7 @@ type Hnsw struct {
 	wal              *wal
 }
 
-func NewHnsw(params indexentities.HnswParams, filesPath string, store *objstore.ObjectStore) (*Hnsw, error) {
+func NewHnsw(params indexentities.HnswParams, filesPath string, store *objstore.Stores) (*Hnsw, error) {
 	h := Hnsw{
 		m:                params.M,
 		mMax:             params.MMax,
