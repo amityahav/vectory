@@ -109,3 +109,7 @@ func (m *MetaManager) GetCollection(ctx context.Context, name string) (*ent.Coll
 func (m *MetaManager) GetCollections(ctx context.Context) ([]*ent.Collection, error) {
 	return m.db.Collection.Query().All(ctx)
 }
+
+func (m *MetaManager) Close() error {
+	return m.db.Close()
+}

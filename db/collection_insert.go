@@ -10,6 +10,10 @@ func (c *Collection) Insert(ctx context.Context, obj *objstoreentities.Object) e
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if c.closed {
+		return ErrCollectionClosed
+	}
+
 	if err := c.validateObjectsMappings([]*objstoreentities.Object{obj}); err != nil {
 		return err
 	}
@@ -34,6 +38,10 @@ func (c *Collection) Insert(ctx context.Context, obj *objstoreentities.Object) e
 func (c *Collection) InsertBatch(ctx context.Context, objs []*objstoreentities.Object) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	if c.closed {
+		return ErrCollectionClosed
+	}
 
 	if err := c.validateObjectsMappings(objs); err != nil {
 		return err
@@ -87,6 +95,10 @@ func (c *Collection) InsertBatch2(ctx context.Context, objs []*objstoreentities.
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if c.closed {
+		return ErrCollectionClosed
+	}
+
 	if err := c.validateObjectsMappings(objs); err != nil {
 		return err
 	}
@@ -133,7 +145,7 @@ func (c *Collection) InsertBatch2(ctx context.Context, objs []*objstoreentities.
 // insert handles the actual insertion of the object both to the object storage and index.
 // it will also create an embedding for the data if vector is not specified.
 func (c *Collection) insert(obj *objstoreentities.Object) error {
-	id, err := c.idCounter.FetchAndInc()
+	id, err := c.idCounter.fetchAndInc()
 	if err != nil {
 		return err
 	}

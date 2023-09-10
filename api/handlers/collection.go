@@ -35,7 +35,10 @@ func (h *CollectionHandler) getCollection(params collection.GetCollectionParams)
 		return middleware.Error(code, handleError(err))
 	}
 
-	cfg := c.GetConfig()
+	cfg, err := c.GetConfig()
+	if err != nil {
+		return middleware.Error(http.StatusInternalServerError, handleError(err))
+	}
 
 	col := models.Collection{
 		Name:           cfg.Name,

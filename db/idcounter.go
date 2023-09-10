@@ -38,7 +38,7 @@ func newIdCounter(filesPath string) (*IdCounter, error) {
 	}, nil
 }
 
-func (c *IdCounter) FetchAndInc() (uint64, error) {
+func (c *IdCounter) fetchAndInc() (uint64, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -60,4 +60,8 @@ func (c *IdCounter) FetchAndInc() (uint64, error) {
 	}
 
 	return prev, nil
+}
+
+func (c *IdCounter) close() error {
+	return c.file.Close()
 }

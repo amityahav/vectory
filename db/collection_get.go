@@ -12,6 +12,10 @@ func (c *Collection) Get(objIds []uint64) ([]objstoreentities.Object, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
+	if c.closed {
+		return nil, ErrCollectionClosed
+	}
+
 	objects := make([]objstoreentities.Object, 0, len(objIds))
 	for _, id := range objIds {
 		obj, found, err := c.stores.GetObject(id)
@@ -33,6 +37,10 @@ func (c *Collection) Get(objIds []uint64) ([]objstoreentities.Object, error) {
 func (c *Collection) SemanticSearch(ctx context.Context, obj *objstoreentities.Object, k int) (*collection.SemanticSearchResult, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
+
+	if c.closed {
+		return nil, ErrCollectionClosed
+	}
 
 	if err := c.embedObjectsIfNeeded(ctx, []*objstoreentities.Object{obj}); err != nil {
 		return nil, err

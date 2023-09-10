@@ -8,4 +8,6 @@ var (
 	ErrCollectionDoesntExist    = errors.New("collection does not exist")
 	ErrValidationFailed         = errors.New("validation failed")
 	ErrMissingVectorAndEmbedder = errors.New("can't insert an object without vector when there's no embedder")
+	ErrDatabaseClosed           = errors.New("database is closed")
+	ErrCollectionClosed         = errors.New("collection is closed")
 )

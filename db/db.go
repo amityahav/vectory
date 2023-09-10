@@ -13,9 +13,10 @@ import (
 type DB struct {
 	mu              sync.RWMutex
 	metadataManager *metadata.MetaManager
-	collections     *sync.Map
+	collections     map[string]*Collection
 	logger          *logrus.Logger
 	filesPath       string
+	closed          bool
 }
 
 // Open initialises Vectory and init collections and additional metadata if exists.
@@ -35,12 +36,19 @@ func Open(filesPath string) (*DB, error) {
 
 // CreateCollection creates a new collection in the database and cache it in memory.
 func (db *DB) CreateCollection(ctx context.Context, cfg *collection.Collection) (*Collection, error) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	if db.closed {
+		return nil, ErrDatabaseClosed
+	}
+
 	err := collection.Validate(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrValidationFailed, err)
 	}
 
-	if _, ok := db.collections.Load(cfg.Name); ok { // for safety
+	if _, ok := db.collections[cfg.Name]; ok { // for safety
 		return nil, ErrCollectionAlreadyExists
 	}
 
@@ -54,15 +62,21 @@ func (db *DB) CreateCollection(ctx context.Context, cfg *collection.Collection) 
 		return nil, err
 	}
 
-	db.collections.Store(c.name, c)
+	db.collections[c.name] = c
 
 	return c, nil
 }
 
 // DeleteCollection deletes collection both on disk and memory.
 func (db *DB) DeleteCollection(ctx context.Context, name string) error {
-	// TODO: handle case where deleting and another user has ref to the collection trying accessing removed files
-	if _, ok := db.collections.Load(name); !ok {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	if db.closed {
+		return ErrDatabaseClosed
+	}
+
+	if _, ok := db.collections[name]; !ok {
 		return fmt.Errorf("%w: %s", ErrValidationFailed, ErrCollectionDoesntExist)
 	}
 
@@ -71,19 +85,50 @@ func (db *DB) DeleteCollection(ctx context.Context, name string) error {
 		return err
 	}
 
-	db.collections.Delete(name)
+	delete(db.collections, name)
 
 	return nil
 }
 
 // GetCollection returns the collection with name.
-func (db *DB) GetCollection(ctx context.Context, name string) (*Collection, error) {
-	c, ok := db.collections.Load(name)
+func (db *DB) GetCollection(_ context.Context, name string) (*Collection, error) {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	if db.closed {
+		return nil, ErrDatabaseClosed
+	}
+
+	c, ok := db.collections[name]
 	if !ok {
 		return nil, fmt.Errorf("%w: %s", ErrValidationFailed, ErrCollectionDoesntExist)
 	}
 
-	return c.(*Collection), nil
+	return c, nil
+}
+
+// Close closes the database
+func (db *DB) Close() error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	if err := db.metadataManager.Close(); err != nil {
+		return err
+	}
+
+	for _, c := range db.collections {
+		if c.IsClosed() {
+			continue
+		}
+
+		if err := c.Close(); err != nil {
+			return err
+		}
+	}
+
+	db.closed = true
+
+	return nil
 }
 
 // init collections and metadata to memory.
@@ -99,7 +144,7 @@ func (db *DB) init() error {
 
 	db.metadataManager = mm
 
-	db.collections = &sync.Map{}
+	db.collections = map[string]*Collection{}
 
 	cols, err := db.metadataManager.GetCollections(ctx)
 	if err != nil {
@@ -120,7 +165,7 @@ func (db *DB) init() error {
 			return err
 		}
 
-		db.collections.Store(c.name, c)
+		db.collections[c.name] = c
 	}
 
 	return nil

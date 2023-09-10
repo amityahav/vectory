@@ -149,3 +149,15 @@ func (s *Stores) GetVectorsStore() *bitcask.Bitcask {
 func (s *Stores) Size() int {
 	return s.objects.Len()
 }
+
+func (s *Stores) Close() error {
+	if err := s.objects.Close(); err != nil {
+		return err
+	}
+
+	if err := s.vectors.Close(); err != nil {
+		return err
+	}
+
+	return nil
+}

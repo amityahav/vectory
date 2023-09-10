@@ -32,6 +32,7 @@ type Collection struct {
 	wp          *pond.WorkerPool
 	filesPath   string
 	config      collection.Collection
+	closed      bool
 }
 
 func newCollection(id int, cfg *collection.Collection, filesPath string) (*Collection, error) {
@@ -92,13 +93,44 @@ func newCollection(id int, cfg *collection.Collection, filesPath string) (*Colle
 }
 
 // GetConfig returns collection's configurations.
-func (c *Collection) GetConfig() collection.Collection {
-	return c.config
+func (c *Collection) GetConfig() (*collection.Collection, error) {
+	if c.closed {
+		return nil, ErrCollectionClosed
+	}
+
+	return &c.config, nil
 }
 
 // GetSize returns the number of objects in the collection.
-func (c *Collection) GetSize() int {
-	return c.stores.Size()
+func (c *Collection) GetSize() (int, error) {
+	if c.closed {
+		return 0, ErrCollectionClosed
+	}
+
+	return c.stores.Size(), nil
+}
+
+// Close closes the collection.
+func (c *Collection) Close() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if err := c.idCounter.close(); err != nil {
+		return err
+	}
+
+	if err := c.stores.Close(); err != nil {
+		return err
+	}
+
+	c.closed = true
+
+	return nil
+}
+
+// IsClosed indicates whether the collection is closed or not.
+func (c *Collection) IsClosed() bool {
+	return c.closed
 }
 
 // TODO: currently checking naively the mapping keys but in future check types as well
